@@ -29,7 +29,7 @@ export class WorldMap {
     const sun = new THREE.DirectionalLight(0xfff0cc, 2.4); sun.position.set(20, 40, 15); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); const sc = sun.shadow.camera; sc.left = -30; sc.right = 30; sc.top = 30; sc.bottom = -30; sc.far = 120; scene.add(sun);
     scene.add(new THREE.HemisphereLight(0xbfe6ff, 0x3a5a2a, 1.0));
     // rolling hill: a big disc with a gentle dome
-    const hill = new THREE.Mesh(new THREE.SphereGeometry(70, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), MAT.grass); hill.scale.set(1, 0.08, 1); hill.position.y = -2; hill.receiveShadow = true; scene.add(hill);
+    const hill = new THREE.Mesh(new THREE.SphereGeometry(70, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), MAT.grass); hill.scale.set(1, 0.015, 1); hill.position.y = -1.2; hill.receiveShadow = true; scene.add(hill);
     const base = new THREE.Mesh(new THREE.CylinderGeometry(70, 60, 6, 48), MAT.dirt); base.position.y = -5; scene.add(base);
     // path
     const pts = NODES.map(n => new THREE.Vector3(n.x, 0, n.z)); const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.6); this.curve = curve;
