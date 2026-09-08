@@ -5,89 +5,120 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ERRANT</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap">
 <style>
   :root {
-    --gold: #e7c26a; --gold-dim: #a8873a; --ink: #1a1220; --paper: rgba(20, 14, 30, 0.82);
-    --paper-edge: rgba(231, 194, 106, 0.35); --hp: #e5484d; --sta: #6fd68a; --poise: #f2b134;
-    --steel: #9fd3ff;
+    --gold: #e7c26a; --gold-hi: #fff0c0; --gold-dim: #a8873a; --ink: #1a1220; --paper: rgba(16, 11, 26, 0.86);
+    --edge: rgba(231, 194, 106, 0.42); --hp: #ea4f55; --sta: #7be08f; --poise: #f2b134; --steel: #9fd3ff; --ember: #ff7a3a;
   }
   html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1430; color: #f3e9d2; font-family: "Crimson Pro", Georgia, serif; }
   canvas { display: block; }
   #app { position: fixed; inset: 0; }
   .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; z-index: 20; }
   .screen[hidden] { display: none !important; }
-  h1.logo { font-family: Cinzel, Georgia, serif; font-weight: 900; font-size: clamp(56px, 11vw, 132px); letter-spacing: 0.14em; margin: 0; line-height: 1;
-    background: linear-gradient(180deg, #fff3c9 0%, #e7c26a 45%, #9a6d22 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 4px 0 rgba(60, 30, 10, 0.6)) drop-shadow(0 0 28px rgba(231, 194, 106, 0.35)); }
-  .tag { font-style: italic; font-size: clamp(16px, 2.2vw, 24px); color: #e9d9b8; opacity: 0.9; margin: 10px 0 34px; letter-spacing: 0.04em; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
-  .menu { display: flex; flex-direction: column; gap: 12px; min-width: 260px; }
-  button.m { font-family: Cinzel, Georgia, serif; font-weight: 700; font-size: 20px; letter-spacing: 0.12em; color: var(--gold);
-    background: linear-gradient(180deg, rgba(40, 28, 58, 0.92), rgba(18, 12, 28, 0.92)); border: 1px solid var(--paper-edge); border-radius: 6px;
-    padding: 12px 28px; cursor: pointer; text-transform: uppercase; transition: transform .08s, box-shadow .12s, border-color .12s; }
-  button.m:hover { transform: translateY(-1px); border-color: var(--gold); box-shadow: 0 0 22px rgba(231,194,106,0.25); }
+
+  /* ---------- typography & ornaments */
+  h1.logo { font-family: "Cinzel Decorative", Cinzel, Georgia, serif; font-weight: 900; font-size: clamp(60px, 11vw, 136px); letter-spacing: 0.12em; margin: 0; line-height: 1;
+    background: linear-gradient(180deg, #fff6d8 0%, #efcf7a 40%, #b98a30 70%, #7a5a1a 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 3px 0 rgba(60, 30, 10, 0.75)) drop-shadow(0 0 34px rgba(231, 194, 106, 0.35)); }
+  .orn { display: flex; align-items: center; gap: 12px; color: var(--gold-dim); font-family: Cinzel, serif; font-size: 13px; letter-spacing: .3em; margin: 6px 0 4px; }
+  .orn::before, .orn::after { content: ""; height: 1px; width: clamp(60px, 14vw, 160px); background: linear-gradient(90deg, transparent, var(--gold-dim)); }
+  .orn::after { background: linear-gradient(90deg, var(--gold-dim), transparent); }
+  .tag { font-style: italic; font-size: clamp(17px, 2.2vw, 25px); color: #efe2c4; margin: 4px 0 30px; letter-spacing: 0.04em; text-shadow: 0 2px 8px rgba(0,0,0,0.7); }
+  .menu { display: flex; flex-direction: column; gap: 10px; min-width: 280px; }
+  button.m { position: relative; font-family: Cinzel, Georgia, serif; font-weight: 700; font-size: 19px; letter-spacing: 0.14em; color: var(--gold);
+    background: linear-gradient(180deg, rgba(52, 36, 74, 0.94), rgba(20, 13, 32, 0.94)); border: 1px solid var(--edge); border-radius: 4px;
+    padding: 12px 30px; cursor: pointer; text-transform: uppercase; transition: transform .08s, box-shadow .15s, border-color .15s, color .15s; box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 6px 18px rgba(0,0,0,.35); }
+  button.m::before, button.m::after { content: "✦"; position: absolute; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--gold-dim); opacity: 0; transition: opacity .15s, left .15s, right .15s; }
+  button.m::before { left: 10px; } button.m::after { right: 10px; }
+  button.m:hover { transform: translateY(-1px); border-color: var(--gold); color: var(--gold-hi); box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 0 26px rgba(231,194,106,0.28); }
+  button.m:hover::before, button.m:hover::after { opacity: 1; }
   button.m:active { transform: translateY(1px); }
   button.m:disabled { opacity: .45; cursor: not-allowed; }
-  .panel { background: var(--paper); border: 1px solid var(--paper-edge); border-radius: 10px; padding: 22px 28px; backdrop-filter: blur(6px); max-width: 640px; width: min(92vw, 640px); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
-  .panel h2 { font-family: Cinzel, Georgia, serif; color: var(--gold); margin: 0 0 14px; letter-spacing: .1em; font-size: 22px; text-align: center; }
-  .row { display: grid; grid-template-columns: 1fr 200px; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px dashed rgba(231,194,106,.12); font-size: 17px; }
+  button.m.primary { font-size: 22px; padding: 14px 34px; background: linear-gradient(180deg, rgba(90, 62, 24, 0.95), rgba(48, 30, 12, 0.95)); border-color: var(--gold); color: var(--gold-hi); }
+  .panel { position: relative; background: var(--paper); border: 1px solid var(--edge); border-radius: 6px; padding: 26px 30px; backdrop-filter: blur(8px); max-width: 680px; width: min(92vw, 680px); box-shadow: 0 24px 70px rgba(0,0,0,.55), inset 0 0 0 1px rgba(0,0,0,.4); }
+  .panel::before { content: ""; position: absolute; inset: 6px; border: 1px solid rgba(231,194,106,.16); border-radius: 3px; pointer-events: none; }
+  .panel h2 { font-family: Cinzel, Georgia, serif; color: var(--gold); margin: 0 0 6px; letter-spacing: .18em; font-size: 22px; text-align: center; }
+  .panel .orn { justify-content: center; margin-bottom: 14px; }
+  .row { display: grid; grid-template-columns: 1fr 210px; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px dashed rgba(231,194,106,.12); font-size: 17px; }
   .row:last-child { border-bottom: 0; }
   .row label { color: #f3e9d2; }
   .row small { display: block; color: #b8a888; font-size: 13px; }
   .row input[type=range] { width: 100%; accent-color: var(--gold); }
-  .row select { width: 100%; background: #221a33; color: #f3e9d2; border: 1px solid var(--paper-edge); border-radius: 4px; padding: 5px; font-family: inherit; font-size: 15px; }
-  .row .val { color: var(--gold); font-variant-numeric: tabular-nums; min-width: 42px; text-align: right; }
+  .row select { width: 100%; background: #221a33; color: #f3e9d2; border: 1px solid var(--edge); border-radius: 4px; padding: 5px; font-family: inherit; font-size: 15px; }
+  .row .val { color: var(--gold); font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; }
   .row .ctl { display: flex; align-items: center; gap: 8px; }
-  .toggle { width: 46px; height: 24px; border-radius: 12px; background: #3a2f4d; border: 1px solid var(--paper-edge); position: relative; cursor: pointer; }
+  .toggle { width: 46px; height: 24px; border-radius: 12px; background: #3a2f4d; border: 1px solid var(--edge); position: relative; cursor: pointer; }
   .toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #8a7a6a; transition: left .12s, background .12s; }
   .toggle.on { background: #3f5a3a; } .toggle.on::after { left: 25px; background: var(--sta); }
   .btnrow { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
   .btnrow button.m { font-size: 15px; padding: 9px 18px; }
   .scroll { max-height: 62vh; overflow-y: auto; padding-right: 6px; }
+  .scroll::-webkit-scrollbar { width: 8px; } .scroll::-webkit-scrollbar-thumb { background: #4a3a5a; border-radius: 4px; }
   table.keys { border-collapse: collapse; width: 100%; font-size: 17px; }
-  table.keys td { padding: 6px 8px; border-bottom: 1px dashed rgba(231,194,106,.12); }
-  table.keys td:first-child { color: var(--gold); font-family: Cinzel, serif; font-size: 14px; letter-spacing: .06em; white-space: nowrap; }
-  kbd { font-family: Cinzel, serif; font-size: 13px; background: #2b2140; border: 1px solid var(--paper-edge); border-bottom-width: 3px; border-radius: 4px; padding: 1px 7px; color: #fff; }
-  #title { background: radial-gradient(ellipse at 50% 30%, rgba(60,40,100,0.0), rgba(10,6,20,0.55) 70%); }
-  #title .foot { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; font-size: 13px; color: #b8a888; letter-spacing: .08em; }
-  #boot { position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); z-index: 30; background: var(--paper); border: 1px solid var(--paper-edge); border-radius: 6px; padding: 8px 16px; font-size: 14px; color: #e9d9b8; letter-spacing: .06em; }
+  table.keys td { padding: 7px 8px; border-bottom: 1px dashed rgba(231,194,106,.12); vertical-align: top; }
+  table.keys td:first-child { color: var(--gold); font-family: Cinzel, serif; font-size: 14px; letter-spacing: .06em; white-space: nowrap; padding-top: 10px; }
+  kbd { font-family: Cinzel, serif; font-size: 13px; background: #2b2140; border: 1px solid var(--edge); border-bottom-width: 3px; border-radius: 4px; padding: 1px 7px; color: #fff; margin: 0 1px; }
+  .pad { display: inline-block; font-family: Cinzel, serif; font-size: 11px; color: #cdb8ff; border: 1px solid #6a5a8a; border-radius: 10px; padding: 0 6px; margin-left: 2px; vertical-align: 1px; }
+  .foot { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; font-size: 13px; color: #c9b892; letter-spacing: .08em; text-shadow: 0 1px 4px #000; }
+  .foot b { color: var(--gold); font-weight: 600; }
+  #title { background: radial-gradient(ellipse at 50% 35%, rgba(60,40,100,0.0), rgba(10,6,20,0.62) 75%); }
+  #title .ver { position: absolute; left: 14px; bottom: 12px; font-family: Cinzel, serif; font-size: 11px; color: #8f7f6a; letter-spacing: .12em; }
+  #boot { position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); z-index: 30; background: var(--paper); border: 1px solid var(--edge); border-radius: 6px; padding: 8px 16px; font-size: 14px; color: #e9d9b8; letter-spacing: .06em; }
   #boot.err { color: #ff9a8a; border-color: #b8402f; white-space: pre-wrap; max-width: 80vw; }
   #boot[hidden] { display: none; }
 
-  /* HUD */
+  /* ---------- HUD */
   #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; font-family: Cinzel, serif; }
   #hud[hidden] { display: none; }
-  #vitals { position: absolute; left: 22px; top: 18px; }
+  #vitals { position: absolute; left: 22px; top: 18px; padding: 10px 14px 12px; background: linear-gradient(180deg, rgba(14,10,22,.55), rgba(14,10,22,.25)); border: 1px solid rgba(231,194,106,.22); border-radius: 6px; }
   #hearts { display: flex; gap: 6px; margin-bottom: 8px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.6)); }
-  .heart { width: 26px; height: 26px; background: var(--hp); clip-path: polygon(50% 100%, 6% 55%, 0 30%, 12% 8%, 30% 2%, 50% 18%, 70% 2%, 88% 8%, 100% 30%, 94% 55%); transition: transform .12s; }
+  .heart { width: 26px; height: 26px; background: linear-gradient(180deg, #ff8a90, var(--hp) 55%, #a01c26); clip-path: polygon(50% 100%, 6% 55%, 0 30%, 12% 8%, 30% 2%, 50% 18%, 70% 2%, 88% 8%, 100% 30%, 94% 55%); transition: transform .12s; }
   .heart.empty { background: rgba(60,20,30,.65); }
   .heart.pop { transform: scale(1.35); }
-  .bar { height: 10px; width: 220px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.18); border-radius: 5px; overflow: hidden; }
-  .bar > i { display: block; height: 100%; width: 100%; background: var(--sta); transition: width .06s linear; }
-  .bar > i.low { background: #d9573a; }
-  #gems { position: absolute; right: 24px; top: 18px; display: flex; align-items: center; gap: 8px; font-size: 20px; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
-  #gems .g { width: 16px; height: 16px; background: #7ff0ff; transform: rotate(45deg); box-shadow: 0 0 12px #7ff0ff; }
-  #hint { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); font-family: "Crimson Pro", serif; font-size: 20px; color: #f7ecd4; text-shadow: 0 2px 8px rgba(0,0,0,.85); text-align: center; opacity: 0; transition: opacity .3s; max-width: 80vw; }
+  .bar { height: 10px; width: 220px; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.2); border-radius: 5px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #a8f2b4, var(--sta) 55%, #3f9a52); transition: width .06s linear; }
+  .bar > i.low { background: linear-gradient(180deg, #ffb08a, #d9573a 55%, #8a2f1a); }
+  #stamina-wrap { display: flex; align-items: center; gap: 8px; }
+  #stamina-wrap .lbl { font-size: 10px; letter-spacing: .18em; color: #cdbf9a; width: 52px; }
+  #gems { position: absolute; right: 24px; top: 18px; display: flex; align-items: center; gap: 8px; font-size: 20px; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.7); padding: 8px 14px; background: linear-gradient(180deg, rgba(14,10,22,.55), rgba(14,10,22,.25)); border: 1px solid rgba(231,194,106,.22); border-radius: 6px; }
+  #gems .g { width: 14px; height: 14px; background: linear-gradient(135deg, #dffcff, #5fdcf0); transform: rotate(45deg); box-shadow: 0 0 12px #7ff0ff; }
+  #hint { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); font-family: "Crimson Pro", serif; font-size: 20px; color: #f7ecd4; text-shadow: 0 2px 8px rgba(0,0,0,.85); text-align: center; opacity: 0; transition: opacity .3s; max-width: 80vw; padding: 6px 18px; background: rgba(10,6,18,.45); border-radius: 4px; }
   #hint.show { opacity: 1; }
-  #toast { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font-size: clamp(22px, 3.4vw, 40px); letter-spacing: .18em; color: var(--gold); text-shadow: 0 3px 14px rgba(0,0,0,.8); opacity: 0; transition: opacity .35s; text-transform: uppercase; }
+  #toast { position: absolute; left: 50%; top: 20%; transform: translateX(-50%); font-family: "Cinzel Decorative", Cinzel, serif; font-size: clamp(22px, 3.4vw, 40px); letter-spacing: .18em; color: var(--gold); text-shadow: 0 3px 14px rgba(0,0,0,.85); opacity: 0; transition: opacity .35s; text-transform: uppercase; white-space: nowrap; }
   #toast.show { opacity: 1; }
-  #bossbar { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); width: min(560px, 80vw); opacity: 0; transition: opacity .5s; }
+  #toast::before, #toast::after { content: ""; display: block; height: 1px; margin: 6px auto 0; width: 60%; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+  #toast::before { margin: 0 auto 6px; }
+  #bossbar { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); width: min(600px, 82vw); opacity: 0; transition: opacity .5s; }
   #bossbar.show { opacity: 1; }
-  #bossbar .name { text-align: center; font-size: 15px; letter-spacing: .2em; color: #ffd7c2; text-shadow: 0 2px 6px #000; margin-bottom: 4px; }
-  #bossbar .bar { width: 100%; height: 12px; }
-  #bossbar .bar > i { background: linear-gradient(90deg, #c0392b, #ff6b4a); }
+  #bossbar .name { text-align: center; font-size: 15px; letter-spacing: .24em; color: #ffd7c2; text-shadow: 0 2px 6px #000; margin-bottom: 5px; }
+  #bossbar .bar { width: 100%; height: 12px; border-color: rgba(255,170,120,.4); }
+  #bossbar .bar > i { background: linear-gradient(180deg, #ff9a7a, #c0392b 50%, #7a1a12); }
   #bossbar .bar.poise { height: 5px; margin-top: 3px; } #bossbar .bar.poise > i { background: var(--poise); }
   #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(255,0,0,0) 50%, rgba(200,20,30,.55) 100%); opacity: 0; transition: opacity .12s; }
   #lowhp { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(255,0,0,0) 55%, rgba(120,0,10,.5) 100%); opacity: 0; }
-  #crosshair { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: rgba(255,255,255,.35); }
-  #dead h1, #victory h1 { font-family: Cinzel, serif; font-weight: 900; font-size: clamp(40px, 8vw, 92px); letter-spacing: .2em; margin: 0 0 8px; }
-  #dead { background: rgba(40, 0, 8, .55); } #dead h1 { color: #ff6b6b; text-shadow: 0 0 30px rgba(255,60,60,.6); }
-  #victory { background: rgba(10, 6, 20, .6); } #victory h1 { color: var(--gold); text-shadow: 0 0 30px rgba(231,194,106,.6); }
+  #lockhint { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); font-size: 12px; letter-spacing: .14em; color: #d7c8a8; opacity: .8; text-shadow: 0 1px 4px #000; }
+  /* objective card (tutorial) */
+  #objective { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); width: min(560px, 86vw); background: var(--paper); border: 1px solid var(--edge); border-radius: 6px; padding: 12px 18px 14px 56px; font-family: "Crimson Pro", serif; box-shadow: 0 10px 30px rgba(0,0,0,.5); transition: transform .2s, border-color .3s; }
+  #objective[hidden] { display: none; }
+  #objective.pop { transform: translateX(-50%) scale(1.04); }
+  #objective.done { border-color: var(--sta); }
+  #objective .kicker { font-family: Cinzel, serif; font-size: 11px; letter-spacing: .22em; color: var(--gold-dim); }
+  #objective .title { font-family: Cinzel, serif; font-size: 20px; color: var(--gold); letter-spacing: .08em; margin: 2px 0 4px; }
+  #objective .text { font-size: 17px; color: #f3e9d2; line-height: 1.4; }
+  #objective .text em { color: var(--gold-hi); font-style: italic; }
+  #objective .check { position: absolute; left: 16px; top: 16px; width: 26px; height: 26px; border: 2px solid var(--edge); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--sta); font-size: 16px; }
+  #objective .check::after { content: "✓"; opacity: 0; transition: opacity .2s; }
+  #objective.done .check { border-color: var(--sta); background: rgba(60,120,70,.4); } #objective.done .check::after { opacity: 1; }
+  /* screens */
+  #dead h1, #victory h1 { font-family: "Cinzel Decorative", Cinzel, serif; font-weight: 900; font-size: clamp(40px, 8vw, 92px); letter-spacing: .2em; margin: 0 0 8px; }
+  #dead { background: rgba(40, 0, 8, .55); backdrop-filter: blur(3px); } #dead h1 { color: #ff6b6b; text-shadow: 0 0 30px rgba(255,60,60,.6); }
+  #victory { background: rgba(10, 6, 20, .6); backdrop-filter: blur(3px); } #victory h1 { color: var(--gold); text-shadow: 0 0 30px rgba(231,194,106,.6); }
   .stats { font-size: 20px; color: #e9d9b8; margin: 8px 0 24px; text-align: center; line-height: 1.6; }
-  #pause { background: rgba(10, 6, 20, .55); }
+  .stats b { color: var(--gold); font-family: Cinzel, serif; font-weight: 600; }
+  #pause { background: rgba(10, 6, 20, .5); backdrop-filter: blur(6px); }
   #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 15; transition: opacity .25s; }
-  #lockhint { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); font-size: 12px; letter-spacing: .12em; color: #d7c8a8; opacity: .8; text-shadow: 0 1px 4px #000; }
-  @media (max-width: 720px) { .row { grid-template-columns: 1fr 140px; } .bar { width: 160px; } }
+  @media (max-width: 720px) { .row { grid-template-columns: 1fr 140px; } .bar { width: 160px; } #objective { top: 56px; } }
 </style>
 </head>
 <body>
@@ -98,30 +129,33 @@
   <div id="vignette"></div><div id="lowhp"></div>
   <div id="vitals">
     <div id="hearts"></div>
-    <div class="bar"><i id="stamina"></i></div>
+    <div id="stamina-wrap"><span class="lbl">VIGOUR</span><div class="bar"><i id="stamina"></i></div></div>
   </div>
   <div id="gems"><span class="g"></span><span id="gemcount">0</span><span style="opacity:.6">/</span><span id="gemtotal">0</span></div>
-  <div id="lockhint">CLICK TO CAPTURE MOUSE · ESC TO PAUSE</div>
+  <div id="lockhint">CLICK TO CAPTURE THE MOUSE · ESC TO PAUSE</div>
   <div id="toast"></div>
+  <div id="objective" hidden><div class="check" id="obj-check"></div><div class="kicker" id="obj-kicker">TRAINING</div><div class="title" id="obj-title"></div><div class="text" id="obj-text"></div></div>
   <div id="hint"></div>
   <div id="bossbar"><div class="name" id="bossname">THE HOLLOW WARDEN</div><div class="bar"><i id="bosshp"></i></div><div class="bar poise"><i id="bosspoise"></i></div></div>
-  <div id="crosshair" hidden></div>
 </div>
 
 <div id="title" class="screen">
+  <div class="orn">A KNIGHT · A SWORD · A SKY OF BROKEN STONES</div>
   <h1 class="logo">ERRANT</h1>
-  <div class="tag">a knight, a sword, and a sky of broken stones</div>
+  <div class="tag">climb the ruin, break the Warden</div>
   <div class="menu">
-    <button class="m" id="btn-play">Set Forth</button>
+    <button class="m primary" id="btn-play">Set Forth</button>
+    <button class="m" id="btn-tutorial">Training Yard</button>
     <button class="m" id="btn-settings">Settings</button>
     <button class="m" id="btn-controls">Controls</button>
   </div>
-  <div class="foot">WASD move · SPACE jump (twice) · LMB / J strike · E / K heavy · RMB / L guard · SHIFT roll · mouse to look</div>
+  <div class="foot"><b>WASD</b> move · <b>SPACE</b> jump, again to double · <b>LMB</b> strike · <b>E</b> heavy · <b>RMB</b> guard · <b>SHIFT</b> roll · gamepad supported</div>
+  <div class="ver">ERRANT · v0.2</div>
 </div>
 
 <div id="settings" class="screen" hidden>
   <div class="panel">
-    <h2>SETTINGS</h2>
+    <h2>SETTINGS</h2><div class="orn">✦</div>
     <div class="scroll" id="settings-rows"></div>
     <div class="btnrow"><button class="m" id="btn-settings-reset">Defaults</button><button class="m" id="btn-settings-back">Back</button></div>
   </div>
@@ -129,26 +163,28 @@
 
 <div id="controls" class="screen" hidden>
   <div class="panel">
-    <h2>CONTROLS</h2>
+    <h2>CONTROLS</h2><div class="orn">✦</div>
+    <div class="scroll">
     <table class="keys">
-      <tr><td>Move</td><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys · relative to the camera</td></tr>
-      <tr><td>Jump</td><td><kbd>Space</kbd> · hold for height · press again in the air to double jump</td></tr>
-      <tr><td>Strike</td><td><kbd>LMB</kbd> or <kbd>J</kbd> · three strikes chain · works in the air</td></tr>
-      <tr><td>Heavy</td><td><kbd>E</kbd> or <kbd>K</kbd> · slow, cannot be interrupted, breaks poise</td></tr>
-      <tr><td>Guard</td><td>hold <kbd>RMB</kbd> or <kbd>L</kbd> · blocks from the front, drains stamina · a guard raised just before a hit lands staggers the attacker</td></tr>
-      <tr><td>Roll</td><td><kbd>Shift</kbd> · invulnerable through the middle of the roll</td></tr>
-      <tr><td>Camera</td><td>mouse when captured · <kbd>Q</kbd> / <kbd>E</kbd>-free: use <kbd>[</kbd> <kbd>]</kbd> to turn without the mouse</td></tr>
-      <tr><td>Pause</td><td><kbd>Esc</kbd></td></tr>
+      <tr><td>Move</td><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows <span class="pad">left stick</span> · relative to the camera</td></tr>
+      <tr><td>Jump</td><td><kbd>Space</kbd> <span class="pad">A</span> · hold for height · press again in the air to double jump (a somersault)</td></tr>
+      <tr><td>Strike</td><td><kbd>LMB</kbd> or <kbd>J</kbd> <span class="pad">X</span> · three strikes chain · works in the air</td></tr>
+      <tr><td>Heavy</td><td><kbd>E</kbd> or <kbd>K</kbd> <span class="pad">Y / RT</span> · slow, cannot be interrupted, breaks poise</td></tr>
+      <tr><td>Guard</td><td>hold <kbd>RMB</kbd> or <kbd>L</kbd> <span class="pad">LB / RB</span> · blocks from the front, drains vigour · a guard raised just before a hit lands <em>parries</em> and staggers the attacker</td></tr>
+      <tr><td>Roll</td><td><kbd>Shift</kbd> <span class="pad">B</span> · invulnerable through the middle of the roll · can cancel the end of a strike</td></tr>
+      <tr><td>Camera</td><td>mouse when captured <span class="pad">right stick</span> · <kbd>[</kbd> <kbd>]</kbd> turn without the mouse · the camera swings behind you while you run (Settings)</td></tr>
+      <tr><td>Pause</td><td><kbd>Esc</kbd> <span class="pad">Start</span> · <kbd>N</kbd> <span class="pad">Select</span> skips a tutorial step</td></tr>
     </table>
+    </div>
     <div class="btnrow"><button class="m" id="btn-controls-back">Back</button></div>
   </div>
 </div>
 
 <div id="pause" class="screen" hidden>
-  <div class="panel" style="text-align:center">
-    <h2>PAUSED</h2>
-    <div class="menu" style="align-items:center">
-      <button class="m" id="btn-resume">Resume</button>
+  <div class="panel" style="text-align:center; width: min(92vw, 420px)">
+    <h2>PAUSED</h2><div class="orn">✦</div>
+    <div class="menu" style="align-items:stretch">
+      <button class="m primary" id="btn-resume">Resume</button>
       <button class="m" id="btn-pause-settings">Settings</button>
       <button class="m" id="btn-pause-controls">Controls</button>
       <button class="m" id="btn-respawn">Return to Shrine</button>
@@ -158,26 +194,27 @@
 </div>
 
 <div id="dead" class="screen" hidden>
+  <div class="orn">THE SKY KEEPS WHAT FALLS</div>
   <h1>FALLEN</h1>
   <div class="stats" id="dead-stats">The shrine calls you back.</div>
-  <button class="m" id="btn-dead-continue">Rise Again</button>
+  <button class="m primary" id="btn-dead-continue">Rise Again</button>
 </div>
 
 <div id="victory" class="screen" hidden>
+  <div class="orn">THE RUIN IS QUIET</div>
   <h1>THE WARDEN FALLS</h1>
   <div class="stats" id="victory-stats"></div>
-  <div class="menu"><button class="m" id="btn-victory-again">Set Forth Again</button><button class="m" id="btn-victory-title">Title</button></div>
+  <div class="menu"><button class="m primary" id="btn-victory-again">Set Forth Again</button><button class="m" id="btn-victory-title">Title</button></div>
 </div>
 
 <div id="boot">SUMMONING THE SKY…</div>
 
 <script>
-  // Plain, non-module boot watchdog: a CDN/module failure must never be a silent dead title screen.
   (function () {
     var boot = document.getElementById('boot');
     function fail(msg) {
       boot.hidden = false; boot.className = 'err'; boot.textContent = 'The game failed to start:\n' + msg;
-      ['btn-play', 'btn-settings', 'btn-controls'].forEach(function (id) { var b = document.getElementById(id); if (b) b.disabled = true; });
+      ['btn-play', 'btn-tutorial', 'btn-settings', 'btn-controls'].forEach(function (id) { var b = document.getElementById(id); if (b) b.disabled = true; });
     }
     window.__errantFail = fail;
     if (location.protocol === 'file:') fail('ES modules cannot load over file://. Run "node serve.mjs" and open http://localhost:5850.');

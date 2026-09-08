@@ -1,6 +1,8 @@
 // Props. Everything is built from primitives with shared materials; statics freeze their matrices.
 import * as THREE from 'three';
 import { hash, rockGeometry } from './world.js';
+import { makeTextures, worldMap } from './textures.js';
+const TEX = makeTextures();
 
 const MAT = {
   grass: new THREE.MeshStandardMaterial({ color: 0x6fae4e, roughness: 0.92 }),
@@ -31,7 +33,16 @@ const MAT = {
   flower: [0xfff08a, 0xff9ac8, 0xa8d8ff, 0xffffff].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 })),
   banner: [0x2f56a8, 0x8a2634, 0x3f7a3a].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, side: THREE.DoubleSide })),
 };
-export { MAT };
+// world-space textures: same tiling on every box regardless of size
+worldMap(MAT.grass, TEX.grass, 0.28); MAT.grass.color.setHex(0xf2fff0);
+worldMap(MAT.stone, TEX.stone, 0.32); MAT.stone.color.setHex(0xffffff);
+worldMap(MAT.stoneDark, TEX.stone, 0.32); MAT.stoneDark.color.setHex(0xa89c90);
+worldMap(MAT.stoneMoss, TEX.moss, 0.3); MAT.stoneMoss.color.setHex(0xffffff);
+worldMap(MAT.rock, TEX.rock, 0.11); MAT.rock.color.setHex(0xffffff);
+worldMap(MAT.bark, TEX.bark, 0.7); MAT.bark.color.setHex(0xffffff);
+worldMap(MAT.wood, TEX.bark, 0.9); MAT.wood.color.setHex(0xb08a66);
+worldMap(MAT.dirt, TEX.dirt, 0.3); MAT.dirt.color.setHex(0xffffff);
+export { MAT, TEX };
 
 const GEO = {
   tuft: new THREE.ConeGeometry(0.12, 0.45, 4),

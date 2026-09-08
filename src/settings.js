@@ -15,6 +15,7 @@ export const SCHEMA = [
   { group: 'Display' },
   { key: 'shadows', label: 'Shadows', type: 'select', options: [['off', 'Off'], ['low', 'Low'], ['high', 'High']], def: 'high' },
   { key: 'renderScale', label: 'Render scale', type: 'range', min: 0.5, max: 1, step: 0.05, def: 1, fmt: pct, hint: 'Lower if the frame rate drops' },
+  { key: 'postfx', label: 'Bloom & grading', type: 'toggle', def: true, hint: 'Glow on crystals, lanterns and runes' },
   { key: 'shake', label: 'Screen shake', type: 'toggle', def: true },
   { key: 'hitstop', label: 'Hit stop', type: 'toggle', def: true, hint: 'A tiny freeze when a blow lands' },
   { key: 'hints', label: 'Show hints', type: 'toggle', def: true },

@@ -4,6 +4,13 @@ import * as THREE from 'three';
 import { S } from './settings.js';
 
 const MAXP = 400;
+// soft round sprite so particles read as embers/dust instead of squares
+function spriteTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,0.8)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+export const SPRITE = spriteTexture();
 
 export function sectorGeometry(inner, outer, arc, segments = 24) {
   // Flat sector lying in XY, centred on local -y so that rotation (-π/2 about x, then yaw about y) points it at world forward.
@@ -18,7 +25,7 @@ export class FX {
     this.pPos = new Float32Array(MAXP * 3); this.pCol = new Float32Array(MAXP * 3);
     this.p = []; for (let i = 0; i < MAXP; i++) { this.p.push({ life: 0, vx: 0, vy: 0, vz: 0, g: 0 }); this.pPos[i * 3 + 1] = -9999; }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(this.pPos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(this.pCol, 3));
-    const mat = new THREE.PointsMaterial({ size: 0.24, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
+    const mat = new THREE.PointsMaterial({ size: 0.3, map: SPRITE, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
     this.points = new THREE.Points(geo, mat); this.points.frustumCulled = false; this.points.renderOrder = 998; scene.add(this.points);
     this.pHead = 0;
     this.transients = []; // {mesh, life, max, update}

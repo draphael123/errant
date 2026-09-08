@@ -2,12 +2,13 @@
 // Three lights minimum: a warm key that models form, a cool rim that separates silhouettes, and a hemisphere floor.
 import * as THREE from 'three';
 import { S } from './settings.js';
+import { SPRITE } from './fx.js';
 
 export function hash(n) { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
 
 const SKY = {
   top: new THREE.Color(0x2b1f6e), horizon: new THREE.Color(0xffc192), bottom: new THREE.Color(0x6b4a8e),
-  sunDir: new THREE.Vector3(0.45, 0.62, -0.55).normalize(), sun: new THREE.Color(0xffe6b0),
+  sunDir: new THREE.Vector3(0.38, 0.6, 0.62).normalize(), sun: new THREE.Color(0xffe6b0),
 };
 
 function makeSky() {
@@ -33,14 +34,14 @@ export function createWorld(renderer) {
   scene.fog = new THREE.Fog(0xe9b9a8, 70, 420);
   const sky = makeSky(); scene.add(sky);
 
-  const sun = new THREE.DirectionalLight(0xffd9a6, 2.6);
+  const sun = new THREE.DirectionalLight(0xffdcb0, 2.9);
   sun.position.copy(SKY.sunDir).multiplyScalar(80);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   const sc = sun.shadow.camera; sc.left = -34; sc.right = 34; sc.top = 34; sc.bottom = -34; sc.near = 10; sc.far = 220;
   sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03;
   const sunTarget = new THREE.Object3D(); scene.add(sunTarget); sun.target = sunTarget; scene.add(sun);
-  const rim = new THREE.DirectionalLight(0x7fa7ff, 1.1); rim.position.set(-30, 25, 70); scene.add(rim);
+  const rim = new THREE.DirectionalLight(0x8fb4ff, 1.4); rim.position.set(-30, 25, -70); scene.add(rim);
   const hemi = new THREE.HemisphereLight(0x9fb8ff, 0x6b4a2e, 0.95); scene.add(hemi);
   const amb = new THREE.AmbientLight(0x3a2c4a, 0.35); scene.add(amb);
 
@@ -143,7 +144,7 @@ function buildMotes() {
   const pos = new Float32Array(N * 3), vel = [];
   for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * R * 2; pos[i * 3 + 1] = (Math.random() - 0.5) * R; pos[i * 3 + 2] = (Math.random() - 0.5) * R * 2; vel.push({ x: (Math.random() - 0.5) * 0.4, y: 0.15 + Math.random() * 0.3, z: (Math.random() - 0.5) * 0.4, ph: Math.random() * 6.28 }); }
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const mat = new THREE.PointsMaterial({ color: 0xffe9a8, size: 0.16, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true });
+  const mat = new THREE.PointsMaterial({ color: 0xffe9a8, size: 0.22, map: SPRITE, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true });
   const points = new THREE.Points(geo, mat); points.frustumCulled = false;
   const centre = new THREE.Vector3();
   function update(dt, focus) {

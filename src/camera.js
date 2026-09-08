@@ -11,7 +11,7 @@ export class FollowCamera {
   }
   reset(pos, yaw) { this.yaw = yaw + Math.PI; this.pitch = 0.42; this.first = true; this.smoothTarget.set(pos.x, pos.y + 1.4, pos.z); }
   update(dt, input, playerPos, playerYaw, moving, shake) {
-    const { dx, dy } = input.consumeMouse();
+    const { dx, dy } = input.consumeMouse(dt);
     const k = 0.0022 * S.sens;
     this.yaw -= dx * k; this.pitch += dy * k * (S.invertY ? -1 : 1);
     this.pitch = Math.max(-0.3, Math.min(1.25, this.pitch));
@@ -23,7 +23,7 @@ export class FollowCamera {
     this.target.set(playerPos.x, playerPos.y + 1.4, playerPos.z);
     if (this.first) { this.smoothTarget.copy(this.target); this.first = false; }
     else { const kk = 1 - Math.exp(-dt * 14); this.smoothTarget.x += (this.target.x - this.smoothTarget.x) * kk; this.smoothTarget.z += (this.target.z - this.smoothTarget.z) * kk; this.smoothTarget.y += (this.target.y - this.smoothTarget.y) * (1 - Math.exp(-dt * 9)); }
-    this.dist += (S.camDist - this.dist) * (1 - Math.exp(-dt * 6));
+    this.dist += ((this.overrideDist || S.camDist) - this.dist) * (1 - Math.exp(-dt * 6));
     const cp = Math.cos(this.pitch);
     const dir = this.tmp.set(Math.sin(this.yaw) * cp, Math.sin(this.pitch), Math.cos(this.yaw) * cp);
     // pull in if the line of sight crosses a solid box

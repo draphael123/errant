@@ -2,7 +2,7 @@
 // Hyperarmour is a property of the MOVE: a committed swing is not interrupted; only a full poise meter opens a punish.
 import * as THREE from 'three';
 import { makeBody } from './physics.js';
-import { buildKnave, buildThornshot, buildWarden } from './rigs.js';
+import { buildKnave, buildThornshot, buildWarden, buildDummy } from './rigs.js';
 import { diff } from './settings.js';
 import { turnToward } from './player.js';
 
@@ -114,19 +114,23 @@ export class Knave extends Enemy {
     const q = {}, t = this.time, st = this.state; let rate = 14;
     const hs = Math.hypot(this.vel.x, this.vel.z); if (hs > 0.3) this.walkPhase += dt * (5 + hs * 2.2);
     const f = clamp(hs / 3.9, 0, 1);
+    q.browL = 0; q.browR = 0; q.browY = 0; q.mouthOpen = 0; q.mouthW = 1; q.eyeOpen = 1; q.footR = 0; q.footL = 0;
     if (st === 'attack') {
+      q.browL = 0.5; q.browR = 0.5; q.mouthOpen = 0.9; q.mouthW = 0.8; q.eyeOpen = 0.7;
       const a = this.atk, tt = this.t;
       if (tt < a.windup) { const k = ease(tt / a.windup); q.armR = { x: 2.3 * k, y: 0, z: 0.5 * k }; q.lean = -0.25 * k; q.armL = { x: -0.6 * k, y: 0, z: -0.6 }; q.bodyY = 0.04 * k; q.headX = -0.2 * k; rate = 30; }
       else if (tt < a.windup + a.active) { q.armR = { x: -1.4, y: 0, z: 0.3 }; q.lean = 0.45; q.armL = { x: 0.4, y: 0, z: -0.8 }; q.bodyY = -0.12; q.headX = 0.3; rate = Infinity; }
       else { const k = ease((tt - a.windup - a.active) / a.recovery); q.armR = { x: -1.4 * (1 - k), y: 0, z: 0.3 }; q.lean = 0.45 * (1 - k); q.bodyY = -0.12 * (1 - k); q.armL = { x: 0, y: 0, z: -0.5 }; rate = 10; }
       q.hipR = -0.2; q.hipL = 0.3; q.yaw = 0;
     }
-    else if (st === 'stagger') { const w = Math.sin(t * 15) * 0.15; q.lean = -0.4; q.yaw = w; q.armR = { x: -0.5, y: 0, z: 1.3 }; q.armL = { x: -0.5, y: 0, z: -1.3 }; q.headX = -0.4; q.bodyY = -0.08; q.hipR = -0.3; q.hipL = 0.3; rate = 18; }
-    else if (st === 'hurt') { q.lean = -0.3; q.armR = { x: -0.8, y: 0, z: 0.9 }; q.armL = { x: -0.7, y: 0, z: -0.9 }; q.headX = -0.3; q.bodyY = 0.03; rate = 30; }
-    else if (st === 'dead') { const u = clamp(this.deadT / 0.5, 0, 1), e = ease(u); q.lean = -1.5 * e; q.bodyY = -0.35 * e - Math.max(0, this.deadT - 0.8) * 0.6; q.armR = { x: -0.8 * e, y: 0, z: 1.4 * e }; q.armL = { x: -0.8 * e, y: 0, z: -1.4 * e }; q.hipR = 0.4 * e; q.hipL = -0.3 * e; q.headX = -0.6 * e; rate = Infinity; }
+    else if (st === 'stagger') { const w = Math.sin(t * 15) * 0.15; q.lean = -0.4; q.yaw = w; q.headZ = w * 1.5; q.armR = { x: -0.5, y: 0, z: 1.3 }; q.armL = { x: -0.5, y: 0, z: -1.3 }; q.headX = -0.4; q.bodyY = -0.08; q.hipR = -0.3; q.hipL = 0.3; q.eyeOpen = 0.4; q.mouthOpen = 0.5; q.browY = 0.015; q.browL = -0.3; q.browR = 0.3; rate = 18; }
+    else if (st === 'hurt') { q.lean = -0.3; q.armR = { x: -0.8, y: 0, z: 0.9 }; q.armL = { x: -0.7, y: 0, z: -0.9 }; q.headX = -0.3; q.bodyY = 0.03; q.browY = 0.02; q.browL = -0.4; q.browR = -0.4; q.mouthOpen = 0.7; q.mouthW = 0.6; rate = 30; }
+    else if (st === 'dead') { const u = clamp(this.deadT / 0.5, 0, 1), e = ease(u); q.lean = -1.5 * e; q.bodyY = -0.35 * e - Math.max(0, this.deadT - 0.8) * 0.6; q.armR = { x: -0.8 * e, y: 0, z: 1.4 * e }; q.armL = { x: -0.8 * e, y: 0, z: -1.4 * e }; q.hipR = 0.4 * e; q.hipL = -0.3 * e; q.headX = -0.6 * e; q.eyeOpen = 0.05; q.mouthOpen = 0.4; rate = Infinity; }
     else {
-      const ph = this.walkPhase;
-      q.hipR = Math.sin(ph) * 0.8 * f; q.hipL = -Math.sin(ph) * 0.8 * f;
+      const ph = this.walkPhase, s = Math.sin(ph);
+      q.hipR = s * 0.8 * f; q.hipL = -s * 0.8 * f; q.footR = Math.max(0, s) * 0.5 * f; q.footL = Math.max(0, -s) * 0.5 * f;
+      if (st === 'chase') { q.browL = 0.45; q.browR = 0.45; q.mouthOpen = 0.35; q.mouthW = 0.85; q.eyeOpen = 0.8; }
+      else { const peek = Math.sin(t * 0.9) > 0.85 ? 1 : 0; q.browY = 0.012 * peek; q.mouthW = 0.9; }
       q.armR = { x: -Math.sin(ph) * 0.5 * f + 0.4, y: 0, z: 0.4 }; q.armL = { x: Math.sin(ph) * 0.6 * f - 0.1, y: 0, z: -0.45 };
       q.lean = 0.28 + 0.15 * f; q.bodyY = Math.abs(Math.sin(ph)) * 0.05 * f + Math.sin(t * 3) * 0.01; q.headX = -0.15 + Math.sin(t * 1.3) * 0.08; q.headY = Math.sin(t * 0.9) * 0.3 * (1 - f); q.yaw = Math.sin(ph) * 0.1 * f;
     }
@@ -287,6 +291,7 @@ export class Warden extends Enemy {
   }
   pose(dt) {
     const q = {}, st = this.state, t = this.time; let rate = 12;
+    q.eyeOpen = st === 'attack' && this.atk && this.t < WATK[this.atk].windup * (this.phase === 2 ? 0.74 : 1) ? 1.6 : 1; q.browL = 0.5; q.browR = 0.5; q.mouthOpen = st === 'attack' ? 0.6 : 0.1; q.mouthW = 0.8;
     const base = () => { q.foreR = -0.2; q.foreL = -0.3; q.armL = { x: 0.15, y: 0, z: -0.35 }; q.hipR = 0; q.hipL = 0; q.kneeR = 0.1; q.kneeL = 0.1; q.headX = 0; q.cape = 0.1; q.tumble = 0; q.roll = 0; q.bodyY = 0; q.lean = 0.05; q.yaw = 0; };
     base();
     if (st === 'dormant') { q.hipR = -1.4; q.kneeR = 1.5; q.hipL = -0.3; q.kneeL = 2.2; q.bodyY = -0.52; q.lean = 0.35; q.headX = 0.5; q.armR = { x: -0.4, y: 0, z: 0.25 }; q.foreR = -0.9; q.armL = { x: -0.2, y: 0, z: -0.3 }; q.foreL = -0.6; rate = Infinity; }
@@ -310,8 +315,54 @@ export class Warden extends Enemy {
   }
 }
 
+// ---------------------------------------------------------------- TRAINING DUMMY (tutorial only; never dies)
+export class Dummy extends Enemy {
+  constructor(game, spec) {
+    super(game, spec, { name: 'Training Dummy', half: 0.4, height: 2.0, radius: 0.55, hp: 999, poise: 4 });
+    this.rig = buildDummy(); game.scene.add(this.rig.group); this.rig.group.position.copy(this.pos);
+    this.hits = { light: 0, heavy: 0 }; this.results = { blocked: 0, parried: 0, hit: 0, dodged: 0 }; this.mode = 'idle'; this.swingT = 1.5; this.wobble = 0; this.telegraph = game.fx.makeTelegraph(2.3, 1.9);
+    this.atk = { windup: 1.0, active: 0.16, recovery: 0.9, range: 2.2, arc: 1.9 };
+  }
+  get hyper() { return this.state === 'attack'; }
+  takeHit(info) {
+    this.rig.flash(0.08); this.wobble = 1; this.game.sfx('enemyHit');
+    if (info.move === 'heavy') this.hits.heavy++; else this.hits.light++;
+    this.poise += info.poise; this.poiseDelay = 1.3;
+    if (this.poise >= this.poiseMax) { this.poise = 0; this.state = 'stagger'; this.t = 0; this.stunT = 1.2; this.telegraph.hide(); this.game.sfx('stagger'); this.game.fx.burst(this.pos.clone().add(new THREE.Vector3(0, 1.4, 0)), 0xfff0a0, 20, 5); return 'stagger'; }
+    return 'hit';
+  }
+  update(dt) {
+    this.common(dt); const p = this.player, d = this.distToPlayer();
+    this.yaw = turnToward(this.yaw, this.yawToPlayer(), dt * 2);
+    if (this.state === 'stagger') { this.stunT -= dt; if (this.stunT <= 0) this.state = 'idle'; }
+    else if (this.state === 'attack') {
+      const a = this.atk, t = this.t;
+      if (t < a.windup) this.telegraph.show(this.pos, this.yaw, t / a.windup);
+      else if (t < a.windup + a.active) {
+        if (!this.hitDone) { this.hitDone = true; this.telegraph.hide(); this.game.sfx('swing'); const f = this.forward(_v); this.game.fx.slash(this.pos.clone().add(new THREE.Vector3(f.x * 0.3, 1.2, f.z * 0.3)), this.yaw, 0.5, a.range, a.arc, 0xff6a3a, 0.18, 0.3);
+          if (this.playerInArc(a.range, a.arc)) { const rolling = p.state === 'roll'; const res = p.takeDamage(1, this.pos, { knock: 4 }); if (res === 'blocked') this.results.blocked++; else if (res === 'parried') { this.results.parried++; this.state = 'stagger'; this.t = 0; this.stunT = 1.4; } else if (res === 'immune' && rolling) this.results.dodged++; else if (res === 'hit') this.results.hit++; }
+          else if (p.state === 'roll' && d < a.range + 1.2) this.results.dodged++; }
+      }
+      else if (t > a.windup + a.active + a.recovery) { this.state = 'idle'; this.swingT = 1.6; }
+    }
+    else if (this.mode === 'swing' && p.alive) { this.swingT -= dt; if (this.swingT <= 0 && d < 3.6) { this.state = 'attack'; this.t = 0; this.hitDone = false; } }
+    this.wobble = Math.max(0, this.wobble - dt * 2.2);
+    this.rig.group.position.copy(this.pos); this.rig.group.rotation.y = this.yaw;
+    this.pose(dt);
+  }
+  pose(dt) {
+    const q = {}, t = this.time, st = this.state; let rate = 16;
+    const w = Math.sin(t * 22) * this.wobble * 0.25;
+    q.lean = w; q.roll = Math.cos(t * 19) * this.wobble * 0.2; q.browL = 0; q.browR = 0; q.mouthOpen = 0; q.mouthW = 1; q.eyeOpen = 1; q.headY = 0; q.browY = 0;
+    if (st === 'attack') { const a = this.atk, tt = this.t; if (tt < a.windup) { const k = ease(tt / a.windup); q.armR = { x: 2.0 * k, y: 0, z: 0.4 }; q.yaw = 0.5 * k; q.browL = 0.4 * k; q.browR = 0.4 * k; rate = 24; } else if (tt < a.windup + a.active) { q.armR = { x: -1.3, y: 0, z: 0.3 }; q.yaw = -0.5; q.mouthOpen = 0.6; rate = Infinity; } else { const k = ease((tt - a.windup - a.active) / a.recovery); q.armR = { x: -1.3 * (1 - k), y: 0, z: 0.3 }; q.yaw = -0.5 * (1 - k); rate = 10; } }
+    else if (st === 'stagger') { q.lean = -0.25 + w; q.headY = Math.sin(t * 9) * 0.4; q.eyeOpen = 0.4; q.mouthOpen = 0.5; q.browL = -0.3; q.browR = 0.3; q.armR = { x: -0.3, y: 0, z: 0.9 }; rate = 16; }
+    else { q.armR = { x: 0.2, y: 0, z: 0.35 }; q.armL = { x: 0, y: 0, z: -0.2 }; q.yaw = 0; if (this.wobble > 0.3) { q.eyeOpen = 0.5; q.mouthOpen = 0.4; q.browY = 0.02; } else { q.browY = Math.sin(t * 0.7) > 0.9 ? 0.015 : 0; q.mouthW = 1.3; } }
+    this.rig.blend(q, rate, dt);
+  }
+}
+
 export function spawnEnemies(game, specs) {
   const out = [];
-  for (const s of specs) { if (s.type === 'knave') out.push(new Knave(game, s)); else if (s.type === 'thornshot') out.push(new Thornshot(game, s)); else if (s.type === 'warden') out.push(new Warden(game, s)); }
+  for (const s of specs) { if (s.type === 'knave') out.push(new Knave(game, s)); else if (s.type === 'thornshot') out.push(new Thornshot(game, s)); else if (s.type === 'warden') out.push(new Warden(game, s)); else if (s.type === 'dummy') out.push(new Dummy(game, s)); }
   return out;
 }
