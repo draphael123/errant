@@ -40,7 +40,7 @@ let composer = null, bloom = null;
 function buildComposer(scene) {
   composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  bloom = new UnrealBloomPass(new THREE.Vector2(1280, 720), 0.55, 0.5, 0.8); composer.addPass(bloom);
+  bloom = new UnrealBloomPass(new THREE.Vector2(1280, 720), 0.38, 0.45, 0.9); composer.addPass(bloom);
   composer.addPass(new OutputPass());
   composer.addPass(new ShaderPass(GradeShader));
 }
@@ -76,7 +76,7 @@ const tutorial = new Tutorial(game);
 
 function resetRun(mode) {
   game.mode = mode;
-  for (const e of game.enemies) { scene.remove(e.rig.group); if (e.telegraph && e.telegraph.mesh) scene.remove(e.telegraph.mesh); if (e.tele) for (const k in e.tele) scene.remove(e.tele[k].mesh); }
+  for (const e of game.enemies) e.dispose();
   for (const b of game.projectiles) scene.remove(b.mesh); game.projectiles.length = 0;
   const specs = mode === 'tutorial' ? [...level.enemySpecs, { type: 'dummy', x: -4.5, y: 0, z: 3.5, yaw: -1.2 }] : level.enemySpecs;
   game.enemies = spawnEnemies(game, specs);
@@ -93,7 +93,7 @@ function resetRun(mode) {
   game.player.respawn(level.spawn, 0);
   game.player.stats = { jumps: 0, doubles: 0, rolls: 0, hits: 0, blocks: 0, parries: 0, heavies: 0, lights: 0, moved: 0, lookMoved: 0 };
   followCam.reset(level.spawn, 0);
-  hud.setHearts(6, 6); hud.setGems(0, level.gemTotal); hud.boss(false);
+  hud.setHealth(100, 100); hud.setGems(0, level.gemTotal); hud.boss(false);
   if (mode === 'tutorial') tutorial.start(); else tutorial.stop();
 }
 
@@ -113,6 +113,9 @@ function startGame(mode = 'adventure') {
   if (mode === 'tutorial') { hud.toast('THE TRAINING YARD', 2.2); }
   else { hud.toast('THE LANDING', 2.2); hud.hint('Reach the courtyard beyond the stepping stones.', 5); }
 }
+// the title theme can only start after a gesture: first click or key on the title screen
+function titleMusic() { if (game.state === 'title') { initAudio(); startMusic('title'); } }
+window.addEventListener('pointerdown', titleMusic); window.addEventListener('keydown', titleMusic);
 $('btn-play').onclick = () => { sfx('ui'); startGame('adventure'); };
 $('btn-tutorial').onclick = () => { sfx('ui'); startGame('tutorial'); };
 $('btn-settings').onclick = () => { initAudio(); sfx('ui'); settingsReturn = 'title'; renderSettings($('settings-rows')); show('settings'); };
@@ -124,10 +127,10 @@ $('btn-resume').onclick = () => resume();
 $('btn-pause-settings').onclick = () => { sfx('ui'); settingsReturn = 'pause'; renderSettings($('settings-rows')); show('settings'); };
 $('btn-pause-controls').onclick = () => { sfx('ui'); settingsReturn = 'pause'; show('controls'); };
 $('btn-respawn').onclick = () => { sfx('ui'); returnToShrine(false); resume(); };
-$('btn-quit').onclick = () => { sfx('ui'); stopMusic(); tutorial.stop(); setState('title'); show('title'); };
+$('btn-quit').onclick = () => { sfx('ui'); tutorial.stop(); setState('title'); show('title'); startMusic('title'); };
 $('btn-dead-continue').onclick = () => { sfx('ui'); returnToShrine(true); setState('playing'); };
 $('btn-victory-again').onclick = () => { sfx('ui'); startGame('adventure'); };
-$('btn-victory-title').onclick = () => { sfx('ui'); stopMusic(); setState('title'); show('title'); };
+$('btn-victory-title').onclick = () => { sfx('ui'); setState('title'); show('title'); startMusic('title'); };
 
 function pause() { if (game.state !== 'playing') return; setState('paused'); show('pause'); sfx('ui'); }
 function resume() { if (game.state !== 'paused') return; setState('playing'); }
@@ -157,15 +160,15 @@ function returnToShrine(afterDeath) {
     const spec = game.boss.spec; game.boss.pos.set(spec.x, spec.y, spec.z); game.boss.vel.set(0, 0, 0); game.boss.hp = game.boss.hpMax; game.boss.poise = 0; game.boss.state = 'dormant'; game.boss.phase = 1; game.boss.telegraph.hide(); game.boss.yaw = Math.PI;
     hud.boss(false); startMusic('explore');
   }
-  hud.setHearts(game.player.hp, game.player.hpMax);
+  hud.setHealth(game.player.hp, game.player.hpMax);
   if (afterDeath) hud.toast(s.name.toUpperCase(), 2);
 }
 function fall() {
   const p = game.player; if (!p.alive || game.falling) return;
   game.falling = true;
-  p.hp -= 1; hud.damage(); fx.shake(0.4); sfx('hurt');
+  p.hp -= 15; hud.damage(); fx.shake(0.4); sfx('hurt');
   if (p.hp <= 0) { p.hp = 0; game.falling = false; die(); return; }
-  hud.setHearts(p.hp, p.hpMax);
+  hud.setHealth(p.hp, p.hpMax);
   $('fade').style.opacity = 1;
   setTimeout(() => { returnToShrine(false); $('fade').style.opacity = 0; game.falling = false; hud.hint('Fell. Returned to the shrine.', 2.5); }, 260);
 }
@@ -195,7 +198,7 @@ function updateGame(dt) {
   tutorial.update(dt, input);
 
   for (const g of level.gems) { if (g.taken) continue; if (tmp.subVectors(g.pos, p.pos).setY(tmp.y - 0.9).length() < 1.3) { g.taken = true; g.mesh.visible = false; game.stats.gems++; hud.setGems(game.stats.gems, level.gemTotal); sfx('gem'); p.emote('happy', 0.7); fx.burst(g.pos, 0x8ef6ff, 16, 4, { gravity: 3, life: 0.6 }); } }
-  for (const h of level.hearts) { if (h.taken) continue; if (tmp.subVectors(h.pos, p.pos).setY(tmp.y - 0.9).length() < 1.3) { h.taken = true; h.mesh.visible = false; p.heal(2); sfx('heart'); fx.burst(h.pos, 0xff6a7a, 20, 4, { gravity: 2, life: 0.7 }); hud.toast('RESTORED', 1); } }
+  for (const h of level.hearts) { if (h.taken) continue; if (tmp.subVectors(h.pos, p.pos).setY(tmp.y - 0.9).length() < 1.3) { h.taken = true; h.mesh.visible = false; p.heal(40); sfx('heart'); fx.burst(h.pos, 0xff6a7a, 20, 4, { gravity: 2, life: 0.7 }); hud.toast('RESTORED', 1); } }
   for (const s of level.shrines) { if (s.active) continue; if (tmp.subVectors(s.pos, p.pos).length() < 2.6) { s.activate(); game.checkpoint = s; sfx('shrine'); fx.burst(s.pos.clone().add(new THREE.Vector3(0, 2.7, 0)), 0x9fd3ff, 30, 4, { gravity: 1, life: 1 }); hud.toast(s.name.toUpperCase(), 2.2); hud.hint('Shrine lit. You will return here if you fall.', 3.5); if (p.hp < p.hpMax) p.heal(p.hpMax); } }
 
   if (p.pos.y < p.lastGround.y - KILL_Y_BELOW || p.pos.y < -60) fall();
@@ -203,19 +206,22 @@ function updateGame(dt) {
   if (p.pos.z > 8 && p.pos.z < 20) tutorialHint('jump', 'SPACE to jump. Hold it for a higher leap.');
   if (p.pos.z > 21 && p.pos.z < 40) tutorialHint('double', 'Press SPACE again in the air for a double jump.');
   if (p.pos.z > 44 && p.pos.z < 66 && p.pos.y > 5) tutorialHint('combat', 'Strike with LMB (three in a row). Hold RMB to guard. SHIFT rolls through attacks.', 7);
-  if (p.pos.z > 67 && p.pos.z < 95) tutorialHint('bolts', 'Thornshots spit bolts. Guard to turn them aside, or roll.', 6);
-  if (p.pos.z > 100 && p.pos.y > 8 && p.pos.y < 30) tutorialHint('crumble', 'Cracked stones give way. Keep moving.', 5);
+  if (p.pos.z > 67 && p.pos.z < 95) tutorialHint('bolts', 'Slingers throw stones. Guard to turn them aside, or roll.', 6);
+  if (p.pos.z > 100 && p.pos.y > 8 && p.pos.y < 30) tutorialHint('crumble', 'Rotten wood gives way. Keep moving.', 5);
   if (p.pos.z > 118 && p.pos.y > 32) tutorialHint('tower', 'The Warden waits beyond. Guard breaks poise; heavy strikes (E) break it faster.', 6);
 
   const A = level.bossArena;
   if (!game.bossActive && game.boss && game.boss.alive && p.pos.z > A.triggerZ && p.pos.y > A.y - 1 && Math.hypot(p.pos.x - A.cx, p.pos.z - A.cz) < A.r) {
     game.bossActive = true; for (const w of level.bossWalls) w.solid = true; game.boss.wake(); startMusic('boss'); hud.toast('THE HOLLOW WARDEN', 3); hud.hint('Jump over the shockwave. Roll through the charge. Punish the stagger.', 7);
   }
-  if (game.bossActive) { level.bossGate.set(Math.min(1, level.bossGate.wall.material.opacity / 0.18 + dt * 1.5)); hud.boss(game.boss.alive, game.boss.hp / game.boss.hpMax, game.boss.poiseFrac, 'THE HOLLOW WARDEN'); }
+  for (const e of game.enemies) if (e.bar) e.bar.update(dt, camera, e);
+  if (game.bossActive) { level.bossGate.set(Math.min(1, level.bossGate.wall.material.opacity / 0.18 + dt * 1.5)); hud.boss(game.boss.alive, game.boss.hp / game.boss.hpMax, game.boss.poiseFrac, 'THE HOLLOW WARDEN');
+  for (const e of game.enemies) if (e.bar) e.bar.update(dt, camera, e); }
   if (game.winSoon > 0) { game.winSoon -= dt; if (game.winSoon <= 0 && !game.won) { for (const w of level.bossWalls) w.solid = false; level.bossGate.set(0); hud.boss(false); win(); } }
 
-  hud.setHearts(Math.max(0, p.hp), p.hpMax); hud.setStamina(p.stamina / 100, p.stamina < 20);
+  hud.setHealth(Math.max(0, p.hp), p.hpMax); hud.setStamina(p.stamina / 100, p.stamina < 20);
   world.update(dt, game.time, p.pos, camera);
+  followCam.speedFrac = p.speedFrac; followCam.rolling = p.state === 'roll';
   followCam.update(dt, input, p.pos, p.yaw, p.state === 'run', fx.shakeVec);
   hud.update(dt, input.locked, p.hp / p.hpMax);
 }
@@ -246,7 +252,7 @@ window.ERRANT = {
   game, S, setSetting, tutorial, start: startGame,
   state() { const p = game.player; return { state: game.state, mode: game.mode, player: { pos: p.pos.toArray().map(n => +n.toFixed(2)), vel: p.vel.toArray().map(n => +n.toFixed(2)), st: p.state, hp: p.hp, sta: Math.round(p.stamina), ground: p.body.onGround, yaw: +p.yaw.toFixed(2), stats: p.stats }, enemies: game.enemies.map(e => ({ n: e.name, st: e.state, hp: e.hp, alive: e.alive, pos: e.pos.toArray().map(n => +n.toFixed(1)) })), gems: game.stats.gems, boss: game.bossActive, checkpoint: game.checkpoint.name, tutorialStep: tutorial.active ? tutorial.step && tutorial.step.id : null }; },
   teleport(x, y, z) { game.player.pos.set(x, y, z); game.player.vel.set(0, 0, 0); game.player.lastGround.set(x, y, z); if (game.player.state === 'dead') game.player.state = 'idle'; followCam.reset(game.player.pos, game.player.yaw); },
-  go(where) { const P = { landing: [0, 0, -3], stones: [0, 0.5, 13], courtyard: [0, 6, 47], bridge: [0, 6, 64], ledge: [0, 7.5, 95], spiral: [0, 8.5, 105.4], cap: [0, 33, 112], arena: [0, 36, 136] }; const p = P[where]; if (p) this.teleport(...p); return p; },
+  go(where) { const P = { landing: [0, 0, -3], stones: [0, 0.5, 13], courtyard: [0, 6, 47], camp: [0, 6, 47], bridge: [0, 6, 64], ledge: [0, 7.5, 95], spiral: [0, 8.5, 105.4], cap: [0, 33, 112], arena: [0, 36, 136] }; const p = P[where]; if (p) this.teleport(...p); return p; },
   god(v = true) { game.player.god = v; },
   kill() { for (const e of game.enemies) if (e.alive && !e.isBoss && e.name !== 'Training Dummy') e.die(); },
   render() { render(); return renderer.domElement.toDataURL('image/jpeg', 0.75); },

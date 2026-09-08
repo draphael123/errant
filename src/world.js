@@ -7,8 +7,8 @@ import { SPRITE } from './fx.js';
 export function hash(n) { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
 
 const SKY = {
-  top: new THREE.Color(0x2b1f6e), horizon: new THREE.Color(0xffc192), bottom: new THREE.Color(0x6b4a8e),
-  sunDir: new THREE.Vector3(0.38, 0.6, 0.62).normalize(), sun: new THREE.Color(0xffe6b0),
+  top: new THREE.Color(0x1d3d2a), horizon: new THREE.Color(0xa9cf9a), bottom: new THREE.Color(0x24382a),
+  sunDir: new THREE.Vector3(0.38, 0.6, 0.62).normalize(), sun: new THREE.Color(0xfff0c8),
 };
 
 function makeSky() {
@@ -21,9 +21,9 @@ function makeSky() {
       void main(){ vec3 d = normalize(vDir); float h = d.y;
         vec3 c = h > 0.0 ? mix(horizon, top, pow(h, 0.5)) : mix(horizon, bottom, pow(-h, 0.55));
         float s = max(dot(d, sunDir), 0.0);
-        c += sun * (pow(s, 240.0) * 1.6 + pow(s, 10.0) * 0.28 + pow(s, 2.0) * 0.06);
+        c += sun * (pow(s, 120.0) * 0.9 + pow(s, 8.0) * 0.22 + pow(s, 2.0) * 0.08);
         // a few faint bands of high cloud
-        float band = sin(d.y * 40.0 + d.x * 3.0) * 0.5 + 0.5; c += vec3(0.05, 0.03, 0.06) * band * smoothstep(0.05, 0.35, h) * (1.0 - smoothstep(0.35, 0.7, h));
+        float leaf = sin(d.x * 23.0 + d.z * 17.0) * sin(d.y * 31.0 + d.x * 7.0) * 0.5 + 0.5; c *= 1.0 - 0.22 * leaf * smoothstep(0.15, 0.6, h);
         gl_FragColor = vec4(c, 1.0); }`,
   });
   const m = new THREE.Mesh(geo, mat); m.frustumCulled = false; m.renderOrder = -10; return m;
@@ -31,19 +31,19 @@ function makeSky() {
 
 export function createWorld(renderer) {
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0xe9b9a8, 70, 420);
+  scene.fog = new THREE.Fog(0xa6c69a, 30, 220);
   const sky = makeSky(); scene.add(sky);
 
-  const sun = new THREE.DirectionalLight(0xffdcb0, 2.9);
+  const sun = new THREE.DirectionalLight(0xfff0cc, 2.6);
   sun.position.copy(SKY.sunDir).multiplyScalar(80);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   const sc = sun.shadow.camera; sc.left = -34; sc.right = 34; sc.top = 34; sc.bottom = -34; sc.near = 10; sc.far = 220;
   sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03;
   const sunTarget = new THREE.Object3D(); scene.add(sunTarget); sun.target = sunTarget; scene.add(sun);
-  const rim = new THREE.DirectionalLight(0x8fb4ff, 1.4); rim.position.set(-30, 25, -70); scene.add(rim);
-  const hemi = new THREE.HemisphereLight(0x9fb8ff, 0x6b4a2e, 0.95); scene.add(hemi);
-  const amb = new THREE.AmbientLight(0x3a2c4a, 0.35); scene.add(amb);
+  const rim = new THREE.DirectionalLight(0xa8d8b0, 1.2); rim.position.set(-30, 25, -70); scene.add(rim);
+  const hemi = new THREE.HemisphereLight(0xa8d4a8, 0x2e3a22, 1.05); scene.add(hemi);
+  const amb = new THREE.AmbientLight(0x304a30, 0.4); scene.add(amb);
 
   // Environment for metals: a PMREM of the sky itself, so armour reflects the sunset.
   const pm = new THREE.PMREMGenerator(renderer);
@@ -52,9 +52,7 @@ export function createWorld(renderer) {
   pm.dispose();
 
   // Distant floating islands, well clear of the route (route is |x| < 24, -20 < z < 175).
-  const bg = buildBackgroundIslands();
-  scene.add(bg.group);
-  const clouds = buildClouds(); scene.add(clouds.mesh);
+  const bg = { update() { } }, clouds = { update() { } };
   const motes = buildMotes(); scene.add(motes.points);
 
   function applyShadowSetting() {
@@ -142,9 +140,9 @@ function buildClouds() {
 function buildMotes() {
   const N = 500; const R = 26;
   const pos = new Float32Array(N * 3), vel = [];
-  for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * R * 2; pos[i * 3 + 1] = (Math.random() - 0.5) * R; pos[i * 3 + 2] = (Math.random() - 0.5) * R * 2; vel.push({ x: (Math.random() - 0.5) * 0.4, y: 0.15 + Math.random() * 0.3, z: (Math.random() - 0.5) * 0.4, ph: Math.random() * 6.28 }); }
+  for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * R * 2; pos[i * 3 + 1] = (Math.random() - 0.5) * R; pos[i * 3 + 2] = (Math.random() - 0.5) * R * 2; vel.push({ x: (Math.random() - 0.5) * 0.6, y: (Math.random() - 0.5) * 0.25, z: (Math.random() - 0.5) * 0.6, ph: Math.random() * 6.28 }); }
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const mat = new THREE.PointsMaterial({ color: 0xffe9a8, size: 0.22, map: SPRITE, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true });
+  const mat = new THREE.PointsMaterial({ color: 0xd8ff8a, size: 0.26, map: SPRITE, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true });
   const points = new THREE.Points(geo, mat); points.frustumCulled = false;
   const centre = new THREE.Vector3();
   function update(dt, focus) {

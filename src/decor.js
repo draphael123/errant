@@ -22,13 +22,13 @@ const MAT = {
   shroomBlue: new THREE.MeshStandardMaterial({ color: 0x4a7fd8, roughness: 0.7, emissive: 0x1a3a8a, emissiveIntensity: 0.5 }),
   shroomStem: new THREE.MeshStandardMaterial({ color: 0xf1e7d0, roughness: 0.8 }),
   spot: new THREE.MeshStandardMaterial({ color: 0xfff5e0, roughness: 0.8 }),
-  crystalC: new THREE.MeshStandardMaterial({ color: 0x9ff4ff, emissive: 0x3ac8e0, emissiveIntensity: 0.9, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.9 }),
-  crystalM: new THREE.MeshStandardMaterial({ color: 0xf0a0ff, emissive: 0xc040e0, emissiveIntensity: 0.9, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.9 }),
+  crystalC: new THREE.MeshStandardMaterial({ color: 0x9ff4ff, emissive: 0x3ac8e0, emissiveIntensity: 0.6, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.9 }),
+  crystalM: new THREE.MeshStandardMaterial({ color: 0xf0a0ff, emissive: 0xc040e0, emissiveIntensity: 0.6, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.9 }),
   iron: new THREE.MeshStandardMaterial({ color: 0x3a3a44, roughness: 0.6, metalness: 0.5 }),
-  lamp: new THREE.MeshStandardMaterial({ color: 0xffd27a, emissive: 0xffb340, emissiveIntensity: 2.2 }),
-  gem: new THREE.MeshStandardMaterial({ color: 0x8ef6ff, emissive: 0x3ad8f0, emissiveIntensity: 1.4, roughness: 0.15, metalness: 0.2 }),
-  heart: new THREE.MeshStandardMaterial({ color: 0xff5a6a, emissive: 0xc0102a, emissiveIntensity: 1.0, roughness: 0.3 }),
-  rune: new THREE.MeshStandardMaterial({ color: 0x9fd3ff, emissive: 0x3aa0ff, emissiveIntensity: 1.8, roughness: 0.3 }),
+  lamp: new THREE.MeshStandardMaterial({ color: 0xffd27a, emissive: 0xffb340, emissiveIntensity: 1.1 }),
+  gem: new THREE.MeshStandardMaterial({ color: 0x8ef6ff, emissive: 0x3ad8f0, emissiveIntensity: 0.9, roughness: 0.15, metalness: 0.2 }),
+  heart: new THREE.MeshStandardMaterial({ color: 0xff5a6a, emissive: 0xc0102a, emissiveIntensity: 0.7, roughness: 0.3 }),
+  rune: new THREE.MeshStandardMaterial({ color: 0x9fd3ff, emissive: 0x3aa0ff, emissiveIntensity: 0.8, roughness: 0.3 }),
   runeOff: new THREE.MeshStandardMaterial({ color: 0x6a6f80, emissive: 0x202838, emissiveIntensity: 0.4, roughness: 0.6 }),
   flower: [0xfff08a, 0xff9ac8, 0xa8d8ff, 0xffffff].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 })),
   banner: [0x2f56a8, 0x8a2634, 0x3f7a3a].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, side: THREE.DoubleSide })),
@@ -168,9 +168,9 @@ export function shrine(scene, x, y, z) {
   const light = new THREE.PointLight(0x5ab0ff, 0, 10, 2); light.position.y = 2.7; g.add(light);
   scene.add(g);
   const o = { group: g, ring, core, light, active: false, pos: new THREE.Vector3(x, y, z),
-    activate() { this.active = true; ring.material = MAT.rune; core.material = MAT.rune; light.intensity = 60; },
+    activate() { this.active = true; ring.material = MAT.rune; core.material = MAT.rune; light.intensity = 40; },
     deactivate() { this.active = false; ring.material = MAT.runeOff; core.material = MAT.runeOff; light.intensity = 0; },
-    update(t) { ring.rotation.y = t * 0.8; ring.rotation.x = Math.sin(t * 0.6) * 0.5; core.rotation.y = -t * 1.3; core.position.y = 2.7 + Math.sin(t * 2) * 0.1; if (this.active) light.intensity = 50 + Math.sin(t * 3) * 12; } };
+    update(t) { ring.rotation.y = t * 0.8; ring.rotation.x = Math.sin(t * 0.6) * 0.5; core.rotation.y = -t * 1.3; core.position.y = 2.7 + Math.sin(t * 2) * 0.1; if (this.active) light.intensity = 34 + Math.sin(t * 3) * 8; } };
   return o;
 }
 
@@ -204,10 +204,11 @@ export function heart(scene, x, y, z) {
 // A moving/crumbling stone platform mesh (collision is added by the level).
 export function stoneSlab(scene, w, d, thick, kind = 'mover') {
   const g = new THREE.Group();
-  g.add(m(new THREE.BoxGeometry(w, thick, d), kind === 'crumble' ? MAT.stoneDark : MAT.stone, 0, -thick / 2, 0));
-  g.add(m(new THREE.BoxGeometry(w * 0.86, 0.1, d * 0.86), kind === 'crumble' ? MAT.stoneMoss : MAT.rune, 0, 0.02, 0, false));
+  g.add(m(new THREE.BoxGeometry(w, thick, d), kind === 'crumble' ? MAT.bark : MAT.stone, 0, -thick / 2, 0));
+  if (kind === 'crumble') { for (let i = -1; i <= 1; i++) g.add(m(new THREE.BoxGeometry(w * 0.28, 0.08, d * 0.95), MAT.wood, i * w * 0.31, 0.02, 0, false)); g.add(m(new THREE.BoxGeometry(w * 0.5, 0.05, d * 0.4), MAT.stoneMoss, w * 0.1, 0.06, d * 0.1, false)); }
+  else g.add(m(new THREE.BoxGeometry(w * 0.86, 0.1, d * 0.86), MAT.rune, 0, 0.02, 0, false));
   if (kind === 'mover') { const rock = m(rockGeometry(Math.min(w, d) * 0.45, thick * 1.6, w * 3), MAT.rock, 0, -thick - thick * 0.5, 0); g.add(rock); }
-  else { for (let i = 0; i < 4; i++) { const a = i * 1.57 + 0.4; g.add(m(new THREE.BoxGeometry(0.4, 0.4, 0.4), MAT.stoneDark, Math.cos(a) * w * 0.35, -thick - 0.1, Math.sin(a) * d * 0.35)); } }
+  else { for (let i = 0; i < 3; i++) { const a = i * 2.1 + 0.4; g.add(m(new THREE.CylinderGeometry(0.06, 0.12, 0.9, 5), MAT.bark, Math.cos(a) * w * 0.35, -thick - 0.35, Math.sin(a) * d * 0.35)); } }
   scene.add(g); return g;
 }
 

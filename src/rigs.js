@@ -181,34 +181,56 @@ export function buildKnight(opts = {}) {
   return rig;
 }
 
-// ------------------------------------------------------------------ KNAVE (goblin-ish footpad)
-export function buildKnave() {
+// ------------------------------------------------------------------ GOBLINS (four kinds share one body)
+export const GOBLIN = {
+  knave: { scale: 1, skin: 0x6f9a3c, belly: 0x9bbf62, cloth: 0x4a3020, weapon: 'club', hat: 'pot' },
+  skirmisher: { scale: 0.88, skin: 0x8fb54a, belly: 0xbcd680, cloth: 0x3a2f5a, weapon: 'dagger', hat: 'hood' },
+  slinger: { scale: 0.95, skin: 0x7a9a4a, belly: 0xa8bf6a, cloth: 0x8a3a2a, weapon: 'sling', hat: 'bandana' },
+  brute: { scale: 1.5, skin: 0x5a7a34, belly: 0x86a552, cloth: 0x4a3020, weapon: 'maul', hat: 'horns' },
+};
+export function buildGoblin(kind = 'knave') {
+  const V = GOBLIN[kind] || GOBLIN.knave;
   const mats = [];
   const M = (color, o = {}) => { const m = new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0.02, ...o }); mats.push(m); return m; };
-  const skin = M(0x6f9a3c), belly = M(0x9bbf62), leather = M(0x4a3020), rust = M(0x6d4a3a, { roughness: 0.6, metalness: 0.3 }), wood = M(0x5a3a1e);
+  const skin = M(V.skin), belly = M(V.belly), leather = M(V.cloth), rust = M(0x6d4a3a, { roughness: 0.6, metalness: 0.3 }), wood = M(0x5a3a1e), stone = M(0x7d7268, { roughness: 0.95 }), steel = M(0xb0b8c4, { roughness: 0.4, metalness: 0.6 });
   const group = new THREE.Group();
   const body = grp(0, 0.5, 0); group.add(body);
   const bel = mesh(G.sph(0.24, 12, 9), skin, 0, 0.06, 0); bel.scale.set(1, 0.9, 0.85); body.add(bel);
   const bb = mesh(G.sph(0.18, 10, 8), belly, 0, 0.0, 0.1); bb.scale.set(1, 0.8, 0.6); body.add(bb);
   body.add(mesh(G.cyl(0.2, 0.28, 0.18, 8), leather, 0, -0.14, 0));
+  if (kind === 'brute') { for (const s of [-1, 1]) { const p = mesh(G.dome(0.13), rust, s * 0.24, 0.22, 0); p.scale.set(1, 0.6, 1); body.add(p); } body.add(mesh(G.box(0.3, 0.12, 0.28), leather, 0, 0.2, 0.02)); }
+  if (kind === 'skirmisher') body.add(mesh(G.box(0.34, 0.2, 0.3), leather, 0, 0.1, 0));
   const head = grp(0, 0.34, 0.06); body.add(head);
   const hd = mesh(G.sph(0.21, 12, 9), skin, 0, 0.1, 0); hd.scale.set(1, 0.95, 1); head.add(hd);
-  head.add(mesh(G.cone(0.03, 0.09, 4), belly, 0, 0.04, 0.2)).rotation.x = Math.PI / 2; // nose
+  head.add(mesh(G.cone(0.03, 0.09, 4), belly, 0, 0.04, 0.2)).rotation.x = Math.PI / 2;
   for (const s of [-1, 1]) { const ear = mesh(G.cone(0.06, 0.28, 5), skin, s * 0.22, 0.14, -0.02); ear.rotation.z = s * -1.9; ear.rotation.x = -0.3; head.add(ear); }
-  const face = buildFace(head, { y: 0.11, z: 0.17, w: 0.16, skin, eyeR: 0.04, eyeGap: 0.075, browW: 0.08, browMat: leather, mouthMat: new THREE.MeshBasicMaterial({ color: 0x2a1010 }), pupilColor: 0xff3b2a });
+  const face = buildFace(head, { y: 0.11, z: 0.17, w: 0.16, skin, eyeR: 0.04, eyeGap: 0.075, browW: 0.08, browMat: leather, mouthMat: new THREE.MeshBasicMaterial({ color: 0x2a1010 }), pupilColor: kind === 'brute' ? 0xffb020 : 0xff3b2a });
   for (const s of [-1, 1]) { const tooth = mesh(G.cone(0.012, 0.035, 4), new THREE.MeshBasicMaterial({ color: 0xfff4d8 }), s * 0.03, 0.0, 0.19); tooth.castShadow = false; head.add(tooth); }
-  const pot = mesh(G.dome(0.2), rust, 0, 0.18, 0); pot.scale.set(1.1, 0.8, 1.1); head.add(pot);
+  if (V.hat === 'pot') { const pot = mesh(G.dome(0.2), rust, 0, 0.18, 0); pot.scale.set(1.1, 0.8, 1.1); head.add(pot); }
+  else if (V.hat === 'hood') { const hood = mesh(G.cone(0.24, 0.42, 8), leather, 0, 0.3, -0.02); head.add(hood); head.add(mesh(G.cyl(0.23, 0.25, 0.1, 8), leather, 0, 0.13, -0.02)); }
+  else if (V.hat === 'bandana') { head.add(mesh(new THREE.TorusGeometry(0.19, 0.035, 6, 14), leather, 0, 0.2, 0)).rotation.x = Math.PI / 2; const tail = mesh(G.box(0.05, 0.02, 0.22), leather, 0.12, 0.2, -0.22); tail.rotation.y = 0.4; head.add(tail); }
+  else if (V.hat === 'horns') { const cap = mesh(G.dome(0.21), rust, 0, 0.17, 0); cap.scale.set(1.05, 0.7, 1.05); head.add(cap); for (const s of [-1, 1]) { const h = mesh(G.cone(0.045, 0.3, 6), new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.7 }), s * 0.18, 0.3, 0); h.rotation.z = -s * 0.9; head.add(h); } }
   const armR = grp(0.24, 0.16, 0), armL = grp(-0.24, 0.16, 0); body.add(armR, armL);
   for (const a of [armR, armL]) { a.add(mesh(G.cyl(0.05, 0.045, 0.3, 7), skin, 0, -0.15, 0)); a.add(mesh(G.sph(0.06, 7, 5), skin, 0, -0.31, 0)); }
-  const club = grp(0, -0.31, 0); armR.add(club);
-  club.add(mesh(G.cyl(0.03, 0.035, 0.24, 6), wood, 0, -0.06, 0));
-  club.add(mesh(G.cyl(0.09, 0.05, 0.32, 7), wood, 0, -0.32, 0));
-  for (let i = 0; i < 5; i++) { const sp = mesh(G.cone(0.02, 0.08, 4), rust, Math.cos(i * 1.26) * 0.09, -0.3, Math.sin(i * 1.26) * 0.09); sp.lookAt(new THREE.Vector3(Math.cos(i * 1.26) * 2, -0.3, Math.sin(i * 1.26) * 2)); sp.rotateX(Math.PI / 2); club.add(sp); }
+  const weapon = grp(0, -0.31, 0); armR.add(weapon);
+  if (V.weapon === 'club') {
+    weapon.add(mesh(G.cyl(0.03, 0.035, 0.24, 6), wood, 0, -0.06, 0)); weapon.add(mesh(G.cyl(0.09, 0.05, 0.32, 7), wood, 0, -0.32, 0));
+    for (let i = 0; i < 5; i++) { const sp = mesh(G.cone(0.02, 0.08, 4), rust, Math.cos(i * 1.26) * 0.09, -0.3, Math.sin(i * 1.26) * 0.09); sp.lookAt(new THREE.Vector3(Math.cos(i * 1.26) * 2, -0.3, Math.sin(i * 1.26) * 2)); sp.rotateX(Math.PI / 2); weapon.add(sp); }
+  } else if (V.weapon === 'dagger') {
+    weapon.add(mesh(G.box(0.03, 0.1, 0.03), wood, 0, 0.02, 0)); weapon.add(mesh(G.box(0.1, 0.02, 0.03), rust, 0, -0.04, 0)); weapon.add(mesh(G.box(0.035, 0.3, 0.012), steel, 0, -0.2, 0));
+    const w2 = grp(0, -0.31, 0); armL.add(w2); w2.add(mesh(G.box(0.03, 0.1, 0.03), wood, 0, 0.02, 0)); w2.add(mesh(G.box(0.035, 0.26, 0.012), steel, 0, -0.18, 0));
+  } else if (V.weapon === 'sling') {
+    weapon.add(mesh(G.box(0.02, 0.5, 0.02), leather, 0, -0.25, 0)); weapon.add(mesh(G.sph(0.06, 7, 6), stone, 0, -0.5, 0));
+    body.add(mesh(G.sph(0.11, 8, 6), leather, -0.2, -0.05, -0.12)); // stone pouch
+  } else if (V.weapon === 'maul') {
+    weapon.add(mesh(G.cyl(0.035, 0.04, 0.7, 6), wood, 0, -0.2, 0)); weapon.add(mesh(G.box(0.22, 0.2, 0.28), stone, 0, -0.55, 0)); weapon.add(mesh(G.box(0.24, 0.05, 0.3), rust, 0, -0.55, 0));
+  }
   const hipR = grp(0.1, -0.18, 0), hipL = grp(-0.1, -0.18, 0); body.add(hipR, hipL);
   const ankleR = grp(0, -0.28, 0), ankleL = grp(0, -0.28, 0);
   for (const [h, a] of [[hipR, ankleR], [hipL, ankleL]]) { h.add(mesh(G.cyl(0.065, 0.055, 0.28, 7), skin, 0, -0.14, 0)); h.add(a); a.add(mesh(G.box(0.12, 0.07, 0.2), leather, 0, -0.02, 0.04)); }
-  const rig = new Rig(group, { body, head, armR, armL, hipR, hipL, ankleR, ankleL, club, face }, mats);
-  rig.kind = 'knave';
+  group.scale.setScalar(V.scale);
+  const rig = new Rig(group, { body, head, armR, armL, hipR, hipL, ankleR, ankleL, weapon, face }, mats);
+  rig.kind = 'goblin';
   rig.apply = function () {
     const c = this.cur, p = this.parts; const aR = c.armR || {}, aL = c.armL || {};
     p.body.position.set(0, 0.5 + (c.bodyY || 0), 0); p.body.rotation.set(c.lean || 0, c.yaw || 0, c.roll || 0);
@@ -220,6 +242,7 @@ export function buildKnave() {
   };
   return rig;
 }
+export function buildKnave() { return buildGoblin('knave'); }
 
 // ------------------------------------------------------------------ THORNSHOT (a rooted plant that spits)
 export function buildThornshot() {

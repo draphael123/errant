@@ -72,10 +72,15 @@
   #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; font-family: Cinzel, serif; }
   #hud[hidden] { display: none; }
   #vitals { position: absolute; left: 22px; top: 18px; padding: 10px 14px 12px; background: linear-gradient(180deg, rgba(14,10,22,.55), rgba(14,10,22,.25)); border: 1px solid rgba(231,194,106,.22); border-radius: 6px; }
-  #hearts { display: flex; gap: 6px; margin-bottom: 8px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.6)); }
-  .heart { width: 26px; height: 26px; background: linear-gradient(180deg, #ff8a90, var(--hp) 55%, #a01c26); clip-path: polygon(50% 100%, 6% 55%, 0 30%, 12% 8%, 30% 2%, 50% 18%, 70% 2%, 88% 8%, 100% 30%, 94% 55%); transition: transform .12s; }
-  .heart.empty { background: rgba(60,20,30,.65); }
-  .heart.pop { transform: scale(1.35); }
+  #hpwrap { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  #hpwrap .lbl, #stamina-wrap .lbl { font-size: 10px; letter-spacing: .18em; color: #cdbf9a; width: 52px; }
+  #hpwrap .num { font-size: 13px; color: #ffd0d0; min-width: 28px; text-align: right; font-variant-numeric: tabular-nums; }
+  .bar.hp { position: relative; width: 260px; height: 14px; border-color: rgba(255,160,160,.35); }
+  .bar.hp > i { position: absolute; left: 0; top: 0; }
+  #hpghost { background: linear-gradient(180deg, #ffe0a0, #e0a040); transition: none; }
+  #hpfill { background: linear-gradient(180deg, #ff9aa0, var(--hp) 55%, #a01c26); transition: width .08s linear; }
+  #hpfill.low { background: linear-gradient(180deg, #ffb0a0, #ff4040 55%, #8a0a10); animation: hppulse .8s infinite alternate; }
+  @keyframes hppulse { from { filter: brightness(1); } to { filter: brightness(1.5); } }
   .bar { height: 10px; width: 220px; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.2); border-radius: 5px; overflow: hidden; }
   .bar > i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #a8f2b4, var(--sta) 55%, #3f9a52); transition: width .06s linear; }
   .bar > i.low { background: linear-gradient(180deg, #ffb08a, #d9573a 55%, #8a2f1a); }
@@ -128,7 +133,7 @@
 <div id="hud" hidden>
   <div id="vignette"></div><div id="lowhp"></div>
   <div id="vitals">
-    <div id="hearts"></div>
+    <div id="hpwrap"><span class="lbl">HEALTH</span><div class="bar hp"><i id="hpghost"></i><i id="hpfill"></i></div><span id="hptext" class="num">100</span></div>
     <div id="stamina-wrap"><span class="lbl">VIGOUR</span><div class="bar"><i id="stamina"></i></div></div>
   </div>
   <div id="gems"><span class="g"></span><span id="gemcount">0</span><span style="opacity:.6">/</span><span id="gemtotal">0</span></div>
@@ -142,7 +147,7 @@
 <div id="title" class="screen">
   <div class="orn">A KNIGHT · A SWORD · A SKY OF BROKEN STONES</div>
   <h1 class="logo">ERRANT</h1>
-  <div class="tag">climb the ruin, break the Warden</div>
+  <div class="tag">through the goblin wood, up the hollow tree, break the Warden</div>
   <div class="menu">
     <button class="m primary" id="btn-play">Set Forth</button>
     <button class="m" id="btn-tutorial">Training Yard</button>
@@ -150,7 +155,7 @@
     <button class="m" id="btn-controls">Controls</button>
   </div>
   <div class="foot"><b>WASD</b> move · <b>SPACE</b> jump, again to double · <b>LMB</b> strike · <b>E</b> heavy · <b>RMB</b> guard · <b>SHIFT</b> roll · gamepad supported</div>
-  <div class="ver">ERRANT · v0.2</div>
+  <div class="ver">ERRANT · v0.3 · music: Joth, pauliuw (CC0)</div>
 </div>
 
 <div id="settings" class="screen" hidden>

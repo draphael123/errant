@@ -5,14 +5,14 @@ import { buildKnight } from './rigs.js';
 import { S, diff } from './settings.js';
 
 export const MOVES = {
-  light1: { windup: 0.11, active: 0.12, recovery: 0.22, dmg: 1, poise: 1, lunge: 3.2, arc: 1.5, range: 2.4, knock: 3, next: 'light2', chainAt: 0.55, cost: 12 },
-  light2: { windup: 0.10, active: 0.12, recovery: 0.24, dmg: 1, poise: 1, lunge: 3.2, arc: 1.5, range: 2.4, knock: 3, next: 'light3', chainAt: 0.55, cost: 12 },
-  light3: { windup: 0.17, active: 0.14, recovery: 0.38, dmg: 2, poise: 2, lunge: 4.2, arc: 1.7, range: 2.6, knock: 6, next: null, chainAt: 1, cost: 14 },
+  light1: { windup: 0.08, active: 0.12, recovery: 0.2, dmg: 1, poise: 1, lunge: 4.6, arc: 1.5, range: 2.4, knock: 3, next: 'light2', chainAt: 0.55, cost: 12 },
+  light2: { windup: 0.08, active: 0.12, recovery: 0.22, dmg: 1, poise: 1, lunge: 4.6, arc: 1.5, range: 2.4, knock: 3, next: 'light3', chainAt: 0.55, cost: 12 },
+  light3: { windup: 0.15, active: 0.14, recovery: 0.36, dmg: 2, poise: 2, lunge: 5.5, arc: 1.7, range: 2.6, knock: 6, next: null, chainAt: 1, cost: 14 },
   heavy: { windup: 0.46, active: 0.16, recovery: 0.52, dmg: 3, poise: 4, lunge: 2.2, arc: 2.3, range: 2.9, knock: 8, hyper: true, next: null, chainAt: 1, cost: 28 },
   air: { windup: 0.07, active: 0.15, recovery: 0.2, dmg: 1, poise: 1, lunge: 0, arc: 2.6, range: 2.5, knock: 3, next: null, chainAt: 1, cost: 10, air: true },
 };
 for (const k in MOVES) MOVES[k].name = k;
-const PH = { gravity: 30, run: 8.2, accel: 64, airAccel: 28, decel: 54, jump: 11.6, djump: 10.6, coyote: 0.12, buffer: 0.14, maxFall: 34, rollSpeed: 10.8, rollTime: 0.5, blockSpeed: 0.42 };
+const PH = { gravity: 30, run: 8.6, accel: 84, airAccel: 32, decel: 78, jump: 11.8, djump: 10.8, coyote: 0.12, buffer: 0.14, maxFall: 34, rollSpeed: 10.8, rollTime: 0.5, blockSpeed: 0.42 };
 const STA = { max: 100, regen: 30, delay: 0.5, roll: 20, blockHit: 22 };
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3();
@@ -26,7 +26,7 @@ export class Player {
     this.body = makeBody(0, 0, 0, 0.36, 1.7);
     this.rig = buildKnight(); scene.add(this.rig.group);
     this.pos = this.body.pos; this.vel = this.body.vel;
-    this.hpMax = 6; this.hp = 6; this.stamina = STA.max; this.staDelay = 0;
+    this.hpMax = 100; this.hp = 100; this.stamina = STA.max; this.staDelay = 0;
     this.state = 'idle'; this.t = 0; this.yaw = 0; this.runPhase = 0; this.time = 0;
     this.attack = null; this.iframes = 0; this.canDouble = true; this.airAttackUsed = false; this.coyote = 0; this.jumpBuf = 0; this.wasGround = false;
     this.blockT = 0; this.rollDir = new THREE.Vector3(0, 0, 1); this.rollT = 0; this.stunT = 0; this.hurtT = 0; this.landT = 0; this.landHard = false;
@@ -61,8 +61,9 @@ export class Player {
       return 'blocked';
     }
     const mult = diff().enemyDmg;
-    const real = Math.max(1, Math.round(dmg * mult));
-    this.hp -= real; this.hud.damage(); this.hud.setHearts(Math.max(0, this.hp), this.hpMax);
+    const real = Math.max(1, Math.round(dmg * mult)); this.lastHitT = this.time;
+    this.hp -= real; this.hud.damage(); this.hud.setHealth(Math.max(0, this.hp), this.hpMax);
+    this.fx.number(this.pos.clone().add(new THREE.Vector3(0, 2.1, 0)), '-' + real, '#ff6a6a', 1.1);
     this.fx.shake(0.45 + real * 0.1); this.fx.hitstop(0.05); this.fx.burst(this.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), 0xff6a4a, 16, 6);
     this.attack = null;
     if (this.hp <= 0) { this.hp = 0; this.die(); return 'dead'; }
@@ -72,7 +73,7 @@ export class Player {
     return 'hit';
   }
   die() { if (this.state === 'dead') return; this.state = 'dead'; this.t = 0; this.deadT = 0; this.attack = null; this.sfx('death'); this.fx.shake(0.6); }
-  heal(n) { this.hp = Math.min(this.hpMax, this.hp + n); this.hud.setHearts(this.hp, this.hpMax); this.emote('happy', 1.0); }
+  heal(n) { this.hp = Math.min(this.hpMax, this.hp + n); this.hud.setHealth(this.hp, this.hpMax); this.emote('happy', 1.0); }
 
   // ---- per-frame
   update(dt, input, camFwd, game) {
@@ -140,7 +141,9 @@ export class Player {
       }
       if (!ground && v.y > 2 && input.released.has('Space') && this.state === 'air') v.y *= 0.55;
     }
-    v.y -= PH.gravity * dt * (this.attack && this.attack.move.air && this.attack.phase !== 'recovery' ? 0.35 : 1);
+    // a little hang at the apex makes jumps read; falling is faster than rising
+    const gScale = this.attack && this.attack.move.air && this.attack.phase !== 'recovery' ? 0.35 : (!ground && Math.abs(v.y) < 2.5 ? 0.62 : (v.y < 0 ? 1.18 : 1));
+    v.y -= PH.gravity * dt * gScale;
     v.y = Math.max(v.y, -PH.maxFall);
     const fallSpeed = -v.y;
     const prevX = this.pos.x, prevZ = this.pos.z;
@@ -155,7 +158,7 @@ export class Player {
     }
     this.wasGround = b.onGround;
     const hs = Math.hypot(v.x, v.z); this.speedFrac = clamp(hs / PH.run, 0, 1);
-    if (ground && hs > 1 && this.state !== 'roll') { const prev = this.runPhase; this.runPhase += dt * (6 + hs * 1.3); if (Math.floor(prev / Math.PI) !== Math.floor(this.runPhase / Math.PI)) { this.sfx('step'); if (hs > 5) this.fx.burst(this.pos.clone(), 0xd8c8a8, 2, 1.2, { flat: true, up: 0.6, gravity: 8, life: 0.25 }); } }
+    if (ground && hs > 1 && this.state !== 'roll') { const prev = this.runPhase; this.runPhase += dt * (4.2 + hs * 1.0); if (Math.floor(prev / Math.PI) !== Math.floor(this.runPhase / Math.PI)) { this.sfx('step'); if (hs > 5) this.fx.burst(this.pos.clone(), 0xd8c8a8, 2, 1.2, { flat: true, up: 0.6, gravity: 8, life: 0.25 }); } }
     else if (ground) this.runPhase = 0;
 
     this.lookAt = this.nearestEnemy(game, 10, -0.2);
@@ -218,8 +221,10 @@ export class Player {
       if (res) {
         this.stats.hits++;
         const cp = new THREE.Vector3(e.pos.x - _w.x * e.radius * 0.6, e.pos.y + Math.min(1.4, e.height * 0.6), e.pos.z - _w.z * e.radius * 0.6);
-        this.fx.burst(cp, res === 'stagger' ? 0xfff0a0 : 0xffd27a, mv.name === 'heavy' ? 26 : 14, mv.name === 'heavy' ? 8 : 6);
-        this.fx.hitstop(mv.name === 'heavy' ? 0.09 : 0.045); this.fx.shake(mv.name === 'heavy' ? 0.4 : 0.15);
+        this.fx.burst(cp, res === 'stagger' ? 0xfff0a0 : 0xffd27a, mv.name === 'heavy' ? 30 : 16, mv.name === 'heavy' ? 9 : 7);
+        this.fx.hitstop(mv.name === 'heavy' ? 0.12 : 0.06); this.fx.shake(mv.name === 'heavy' ? 0.55 : 0.22);
+        this.fx.number(cp.clone().add(new THREE.Vector3(0, 0.5, 0)), res === 'kill' ? 'SLAIN' : res === 'stagger' ? 'STAGGER' : String(Math.round(mv.dmg * diff().playerDmg * 10)), res === 'stagger' ? '#fff0a0' : res === 'kill' ? '#ff8a6a' : '#ffd27a', res === 'kill' || res === 'stagger' ? 1.3 : 1);
+        if (e.rig && e.rig.group && !e.isBoss) { e.rig.group.scale.setScalar((e.rig.group.userData.baseScale || (e.rig.group.userData.baseScale = e.rig.group.scale.x)) * 0.86); e.squashT = 0.14; }
         this.sfx('hit', { heavy: mv.name === 'heavy' });
       }
     }

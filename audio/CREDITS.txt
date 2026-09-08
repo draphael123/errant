@@ -1,0 +1,4 @@
+Music (CC0 / public domain, from OpenGameArt.org):
+- menu_theme.mp3   = "Fantasy Orchestral Theme" by Joth   https://opengameart.org/content/fantasy-orchestral-theme
+- forest_theme.mp3 = "The Field Of Dreams" by pauliuw     https://opengameart.org/content/the-field-of-dreams
+Boss music and all sound effects are synthesised in src/audio.js.

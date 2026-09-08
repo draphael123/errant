@@ -48,7 +48,7 @@ const SFX = {
   jump() { const t = ctx.currentTime; const g = gain(0.25); const t1 = env(g, t, 0.01, 0.12, 0, 0.06, 1, 0.3); const o = osc('triangle', 300, t, t1, g); o.frequency.exponentialRampToValueAtTime(620, t + 0.12); },
   djump() { const t = ctx.currentTime; const g = gain(0.28); const t1 = env(g, t, 0.01, 0.16, 0, 0.1, 1, 0.3); const o = osc('sine', 500, t, t1, g); o.frequency.exponentialRampToValueAtTime(1100, t + 0.14); noise(t, t + 0.12, g, 'bandpass', 2000, 4000, 2); },
   land(o) { const t = ctx.currentTime; const g = gain(0.35 * (o.hard ? 1.5 : 1)); const t1 = env(g, t, 0.004, 0.08, 0, 0.08, 1, 0.2); noise(t, t1, g, 'lowpass', 900, 200); const k = osc('sine', 110, t, t + 0.15, g); k.frequency.exponentialRampToValueAtTime(45, t + 0.12); },
-  step() { const t = ctx.currentTime; const g = gain(0.09); const t1 = env(g, t, 0.003, 0.05, 0, 0.04, 1, 0.2); noise(t, t1, g, 'bandpass', 700 + Math.random() * 300, 400, 1.2); },
+  step() { const t = ctx.currentTime; const g = gain(0.16); const t1 = env(g, t, 0.004, 0.06, 0, 0.05, 1, 0.15); noise(t, t1, g, 'lowpass', 420 + Math.random() * 120, 160, 0.6); const k = osc('sine', 95 + Math.random() * 20, t, t + 0.09, g); k.frequency.exponentialRampToValueAtTime(50, t + 0.08); },
   roll() { const t = ctx.currentTime; const g = gain(0.3); const t1 = env(g, t, 0.02, 0.25, 0, 0.15, 1, 0.4); noise(t, t1, g, 'lowpass', 1200, 300, 0.5); },
   hurt() { const t = ctx.currentTime; const g = gain(0.5); const t1 = env(g, t, 0.005, 0.15, 0, 0.2, 1, 0.3); const o = osc('sawtooth', 220, t, t1, g); o.frequency.exponentialRampToValueAtTime(90, t + 0.3); noise(t, t + 0.12, g, 'lowpass', 2500, 400); },
   death() { const t = ctx.currentTime; const g = gain(0.5); const t1 = env(g, t, 0.01, 0.9, 0, 0.6, 1, 0.5); const o = osc('sawtooth', 200, t, t1, g); o.frequency.exponentialRampToValueAtTime(40, t + 1.4); const o2 = osc('sine', 100, t, t1, g); o2.frequency.exponentialRampToValueAtTime(30, t + 1.4); },
@@ -67,8 +67,10 @@ const SFX = {
   ui() { const t = ctx.currentTime; const g = gain(0.15); const t1 = env(g, t, 0.003, 0.08, 0, 0.06, 1, 0.3); osc('sine', 880, t, t1, g); },
 };
 
+const rateLimit = { land: 0.12, step: 0.09, hit: 0.03, clang: 0.05 }; const lastPlayed = {};
 export function sfx(name, opts = {}) {
   if (!ctx || S.sfx <= 0) return;
+  if (rateLimit[name]) { const now = ctx.currentTime; if (now - (lastPlayed[name] || -9) < rateLimit[name]) return; lastPlayed[name] = now; }
   try { SFX[name] && SFX[name](opts); } catch { /* an audio hiccup must never break a frame */ }
 }
 
@@ -79,23 +81,45 @@ const SCALE_BOSS = [0, 1, 5, 6, 8, 12, 13, 17];         // phrygian bite
 const ROOT = 146.83;
 function note(semi) { return ROOT * Math.pow(2, semi / 12); }
 
+const TRACKS = { title: 'audio/menu_theme.mp3', explore: 'audio/forest_theme.mp3' };
+const file = { el: null, gain: null, mode: null };
+function stopFile() {
+  if (!file.el) return; const el = file.el, g = file.gain;
+  try { g.gain.cancelScheduledValues(ctx.currentTime); g.gain.setTargetAtTime(0, ctx.currentTime, 0.35); } catch { }
+  setTimeout(() => { try { el.pause(); el.src = ''; } catch { } }, 1400);
+  file.el = null; file.gain = null; file.mode = null;
+}
+function startFile(mode) {
+  const url = TRACKS[mode]; if (!url) return false;
+  const el = new Audio(url); el.loop = true; el.preload = 'auto';
+  let node; try { node = ctx.createMediaElementSource(el); } catch { return false; }
+  const g = ctx.createGain(); g.gain.value = 0.0001; node.connect(g); g.connect(musBus);
+  file.el = el; file.gain = g; file.mode = mode;
+  el.addEventListener('error', () => { if (file.el === el) { stopFile(); startSynth(mode); } });
+  el.play().then(() => { g.gain.setValueAtTime(0.0001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(1.0, ctx.currentTime + 2.5); }).catch(() => { if (file.el === el) { stopFile(); startSynth(mode); } });
+  return true;
+}
 export function startMusic(mode) {
   if (!ctx) return;
-  if (music.mode === mode) return;
+  if (music.mode === mode || file.mode === mode) return;
   stopMusic();
+  if (startFile(mode)) return;
+  startSynth(mode);
+}
+function startSynth(mode) {
   music.mode = mode; music.step = 0; music.next = ctx.currentTime + 0.1;
-  // pad: two detuned triangles through a lowpass, swelling
   const g = ctx.createGain(); g.gain.value = 0; g.connect(musBus);
   const fl = ctx.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = mode === 'boss' ? 420 : 620; fl.connect(g);
-  const rootF = mode === 'boss' ? note(-12) : note(-12);
-  const oa = ctx.createOscillator(); oa.type = 'triangle'; oa.frequency.value = rootF; oa.detune.value = -6; oa.connect(fl); oa.start();
-  const ob = ctx.createOscillator(); ob.type = 'triangle'; ob.frequency.value = rootF * (mode === 'boss' ? 1.4983 : 1.5); ob.detune.value = 7; ob.connect(fl); ob.start();
+  const rootF = note(-12);
+  const oa = ctx.createOscillator(); oa.type = 'triangle'; oa.frequency.value = rootF; oa.detune.value = -3; oa.connect(fl); oa.start();
+  const ob = ctx.createOscillator(); ob.type = 'triangle'; ob.frequency.value = rootF * (mode === 'boss' ? 1.4983 : 1.5); ob.detune.value = 3; ob.connect(fl); ob.start();
   const oc = ctx.createOscillator(); oc.type = 'sine'; oc.frequency.value = rootF * 0.5; oc.connect(fl); oc.start();
-  g.gain.linearRampToValueAtTime(mode === 'boss' ? 0.22 : 0.16, ctx.currentTime + 2.5);
+  g.gain.linearRampToValueAtTime(mode === 'boss' ? 0.2 : 0.11, ctx.currentTime + 2.5);
   music.pad = [oa, ob, oc]; music.padGain = g; music.filter = fl;
   music.timer = setInterval(scheduleMusic, 120);
 }
 export function stopMusic() {
+  stopFile();
   if (music.timer) clearInterval(music.timer); music.timer = 0;
   if (music.padGain && ctx) { const g = music.padGain, oscs = music.pad; g.gain.cancelScheduledValues(ctx.currentTime); g.gain.setTargetAtTime(0, ctx.currentTime, 0.4); setTimeout(() => { oscs.forEach(o => { try { o.stop(); } catch { } }); }, 1500); }
   music.pad = null; music.padGain = null; music.mode = null;

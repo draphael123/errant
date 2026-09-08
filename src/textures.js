@@ -90,3 +90,16 @@ export function worldMap(mat, tex, scale = 0.25) {
   mat.needsUpdate = true;
   return mat;
 }
+
+// A clump of curved blades on a transparent background, for crossed-quad grass.
+export function makeGrassClump(seed = 1) {
+  const s = 128; const c = document.createElement('canvas'); c.width = c.height = s; const g = c.getContext('2d');
+  const h = (n) => { const x = Math.sin(n * 127.1 + seed * 311.7) * 43758.5453; return x - Math.floor(x); };
+  for (let i = 0; i < 14; i++) {
+    const x0 = s * 0.5 + (h(i) - 0.5) * 30, tall = s * (0.45 + h(i * 3) * 0.5), lean = (h(i * 7) - 0.5) * 70, wdt = 3 + h(i * 11) * 4;
+    const dark = 60 + h(i * 5) * 40, light = 150 + h(i * 13) * 70;
+    const grad = g.createLinearGradient(0, s, 0, s - tall); grad.addColorStop(0, 'rgb(' + (dark * 0.6) + ',' + dark + ',' + (dark * 0.45) + ')'); grad.addColorStop(1, 'rgb(' + (light * 0.55) + ',' + light + ',' + (light * 0.4) + ')');
+    g.fillStyle = grad; g.beginPath(); g.moveTo(x0 - wdt, s); g.quadraticCurveTo(x0 + lean * 0.3, s - tall * 0.55, x0 + lean, s - tall); g.quadraticCurveTo(x0 + lean * 0.35, s - tall * 0.5, x0 + wdt, s); g.closePath(); g.fill();
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; return t;
+}

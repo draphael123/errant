@@ -35,7 +35,8 @@ export class FollowCamera {
     this.cam.position.set(this.smoothTarget.x + dir.x * d, this.smoothTarget.y + dir.y * d, this.smoothTarget.z + dir.z * d);
     if (shake) this.cam.position.add(shake);
     this.cam.lookAt(this.smoothTarget.x + (shake ? shake.x * 0.5 : 0), this.smoothTarget.y, this.smoothTarget.z);
-    if (Math.abs(this.cam.fov - S.fov) > 0.01) { this.cam.fov = S.fov; this.cam.updateProjectionMatrix(); }
+    const wantFov = S.fov + (this.speedFrac || 0) * 4 + (this.rolling ? 3 : 0);
+    if (Math.abs(this.cam.fov - wantFov) > 0.05) { this.cam.fov += (wantFov - this.cam.fov) * (1 - Math.exp(-dt * 8)); this.cam.updateProjectionMatrix(); }
   }
   inside(x, y, z, pad) {
     for (const b of this.phys.boxes) { if (!b.solid || b.kind === 'wall') continue; if (x > b.min.x - pad && x < b.max.x + pad && y > b.min.y - pad && y < b.max.y + pad && z > b.min.z - pad && z < b.max.z + pad) return true; }

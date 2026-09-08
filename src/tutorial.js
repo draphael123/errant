@@ -14,7 +14,7 @@ export const STEPS = [
   { id: 'parry', title: 'Parry', html: `Raise your guard <em>just</em> as the swing lands to parry: the attacker staggers. Press ${KB('N', 'Select')} to skip.`, done: g => g.dummy.results.parried >= 1, skippable: true, focus: true },
   { id: 'roll', title: 'Roll', html: `Roll through a swing with ${KB('Shift', 'B')}. You cannot be hurt through the middle of the roll.`, done: g => g.dummy.results.dodged >= 1, focus: true },
   { id: 'stamina', title: 'Stamina', html: `Strikes, rolls and guarding spend the green bar. Let it refill; an empty bar breaks your guard. Rest a moment.`, done: g => g.player.stamina >= 99, onStart: g => { g.dummy.mode = 'idle'; } },
-  { id: 'go', title: 'Set forth', html: `Well fought. The road climbs across the stepping stones ahead: reach the Courtyard. Shrines light as you pass and call you back if you fall.`, done: g => g.player.pos.z > 12 },
+  { id: 'go', title: 'Set forth', html: `Well fought. The road climbs across the stepping stones ahead: reach the goblin camp. Shrines light as you pass and call you back if you fall.`, done: g => g.player.pos.z > 12 },
 ];
 
 export class Tutorial {
