@@ -53,7 +53,7 @@ const GEO = {
 };
 
 function m(geo, mat, x = 0, y = 0, z = 0, cast = true) { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = cast; o.receiveShadow = true; return o; }
-function freeze(o) { o.traverse(c => { c.matrixAutoUpdate = false; c.updateMatrix(); }); return o; }
+function freeze(o) { o.traverse(c => { c.matrixAutoUpdate = false; c.updateMatrix(); }); o.userData.static = true; return o; }
 
 // A floating island: slab top with a dirt lip and a hanging rock underside.
 export function island(scene, { x, z, w, d, top, thick = 2, seed = 1, kind = 'grass', tufts = true }) {
@@ -207,7 +207,7 @@ export function stoneSlab(scene, w, d, thick, kind = 'mover') {
   g.add(m(new THREE.BoxGeometry(w, thick, d), kind === 'crumble' ? MAT.bark : MAT.stone, 0, -thick / 2, 0));
   if (kind === 'crumble') { for (let i = -1; i <= 1; i++) g.add(m(new THREE.BoxGeometry(w * 0.28, 0.08, d * 0.95), MAT.wood, i * w * 0.31, 0.02, 0, false)); g.add(m(new THREE.BoxGeometry(w * 0.5, 0.05, d * 0.4), MAT.stoneMoss, w * 0.1, 0.06, d * 0.1, false)); }
   else g.add(m(new THREE.BoxGeometry(w * 0.86, 0.1, d * 0.86), MAT.rune, 0, 0.02, 0, false));
-  if (kind === 'mover') { const rock = m(rockGeometry(Math.min(w, d) * 0.45, thick * 1.6, w * 3), MAT.rock, 0, -thick - thick * 0.5, 0); g.add(rock); }
+  if (kind === 'mover') { const rock = m(rockGeometry(Math.min(w, d) * 0.45, thick * 1.6, w * 3), MAT.rock, 0, -thick - thick * 0.5, 0); g.add(rock); const ring = m(new THREE.TorusGeometry(Math.min(w, d) * 0.5, 0.07, 6, 28), MAT.rune, 0, -thick - thick * 1.4, 0, false); ring.rotation.x = Math.PI / 2; g.add(ring); for (let i = 0; i < 4; i++) { const a = i * 1.57; g.add(m(new THREE.OctahedronGeometry(0.18, 0), MAT.rune, Math.cos(a) * w * 0.55, -thick - 0.4 - (i % 2) * 0.5, Math.sin(a) * d * 0.55, false)); } }
   else { for (let i = 0; i < 3; i++) { const a = i * 2.1 + 0.4; g.add(m(new THREE.CylinderGeometry(0.06, 0.12, 0.9, 5), MAT.bark, Math.cos(a) * w * 0.35, -thick - 0.35, Math.sin(a) * d * 0.35)); } }
   scene.add(g); return g;
 }

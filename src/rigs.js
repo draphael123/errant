@@ -2,6 +2,7 @@
 // shoulders : chest : waist : head  ≈  3 : 2 : 1.3 : 1, and the head is taller than it is wide.
 // Faces are real geometry (brows, eyes, mouth) driven by pose keys so characters can EMOTE.
 import * as THREE from 'three';
+import { bakeRig } from './bake.js';
 
 const G = {
   box: (w, h, d) => new THREE.BoxGeometry(w, h, d),
@@ -53,7 +54,7 @@ function buildFace(parent, opts) {
   const browL = mesh(G.box(browW, 0.014, 0.02), browMat, -eyeGap, y + eyeR + 0.02, z + 0.005); browL.castShadow = false;
   const browR = mesh(G.box(browW, 0.014, 0.02), browMat, eyeGap, y + eyeR + 0.02, z + 0.005); browR.castShadow = false;
   const mouth = mesh(G.box(w * 0.55, 0.012, 0.02), mouthMat, 0, y - eyeR - 0.045, z); mouth.castShadow = false;
-  parent.add(eyeL, eyeR_, browL, browR, mouth);
+  parent.add(eyeL, eyeR_, browL, browR, mouth); browL.userData.anim = browR.userData.anim = mouth.userData.anim = true;
   return { eyeL, eyeR: eyeR_, browL, browR, mouth, baseY: y, eyeRad: eyeR, gap: eyeGap };
 }
 function applyFace(f, c, blink) {
@@ -159,7 +160,7 @@ export function buildKnight(opts = {}) {
   const capeM = mesh(G.box(0.5, 0.82, 0.015), cape, 0, -0.41, 0); capeM.castShadow = false; capeG.add(capeM);
 
   group.scale.setScalar(scale);
-  const rig = new Rig(group, { body, head, armR, foreR, armL, foreL, sword, shield, hipR, hipL, kneeR, kneeL, ankleR, ankleL, cape: capeG, blade: bladeMesh, face, visor }, mats);
+  bakeRig(group); const rig = new Rig(group, { body, head, armR, foreR, armL, foreL, sword, shield, hipR, hipL, kneeR, kneeL, ankleR, ankleL, cape: capeG, blade: bladeMesh, face, visor }, mats);
   rig.kind = 'knight';
   rig.apply = function () {
     const c = this.cur, p = this.parts;
@@ -229,7 +230,7 @@ export function buildGoblin(kind = 'knave') {
   const ankleR = grp(0, -0.28, 0), ankleL = grp(0, -0.28, 0);
   for (const [h, a] of [[hipR, ankleR], [hipL, ankleL]]) { h.add(mesh(G.cyl(0.065, 0.055, 0.28, 7), skin, 0, -0.14, 0)); h.add(a); a.add(mesh(G.box(0.12, 0.07, 0.2), leather, 0, -0.02, 0.04)); }
   group.scale.setScalar(V.scale);
-  const rig = new Rig(group, { body, head, armR, armL, hipR, hipL, ankleR, ankleL, weapon, face }, mats);
+  bakeRig(group); const rig = new Rig(group, { body, head, armR, armL, hipR, hipL, ankleR, ankleL, weapon, face }, mats);
   rig.kind = 'goblin';
   rig.apply = function () {
     const c = this.cur, p = this.parts; const aR = c.armR || {}, aL = c.armL || {};
@@ -264,7 +265,7 @@ export function buildThornshot() {
   const lid = mesh(G.sph(0.14, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), bulb, 0, 0.0, 0); eye.add(lid);
   const mouth = mesh(G.sph(0.09, 8, 6), pupil, 0, -0.12, 0.26); mouth.scale.set(1.3, 0.5, 0.6); head.add(mouth);
   for (const s of [-1, 1]) { const lf = mesh(G.cone(0.14, 0.55, 5), stalk, s * 0.3, 0.6, 0); lf.rotation.z = s * 1.2; lf.rotation.x = 0.3; group.add(lf); }
-  const rig = new Rig(group, { head, petals, mouth, eye, lid }, mats);
+  bakeRig(group); const rig = new Rig(group, { head, petals, mouth, eye, lid }, mats);
   rig.kind = 'thornshot';
   rig.apply = function () {
     const c = this.cur, p = this.parts;
@@ -299,7 +300,7 @@ export function buildDummy() {
   const armL = grp(-0.44, 0.3, 0); body.add(armL);
   armL.add(mesh(G.cyl(0.04, 0.04, 0.4, 6), wood, 0, -0.2, 0));
   armL.add(mesh(G.box(0.05, 0.4, 0.34), iron, -0.05, -0.35, 0));
-  const rig = new Rig(group, { body, head, armR, armL, face }, mats);
+  bakeRig(group); const rig = new Rig(group, { body, head, armR, armL, face }, mats);
   rig.kind = 'dummy';
   rig.apply = function () {
     const c = this.cur, p = this.parts; const aR = c.armR || {}, aL = c.armL || {};

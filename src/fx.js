@@ -68,6 +68,7 @@ export class FX {
   hitstop(sec) { if (S.hitstop) this.freeze = Math.max(this.freeze, sec); }
   // A number that pops up, drifts upward and fades. Cheap: one small canvas per number.
   number(pos, text, color = '#ffd27a', size = 1) {
+    if (!S.numbers) return;
     const c = document.createElement('canvas'); c.width = 128; c.height = 64; const g = c.getContext('2d');
     g.font = 'bold 44px Cinzel, Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,0.85)'; g.strokeText(text, 64, 34); g.fillStyle = color; g.fillText(text, 64, 34);
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
@@ -108,7 +109,7 @@ export class HealthBar {
     this.mats = [this.bg.material, this.fg.material, this.poise.material]; this.base = [0.75, 0.95, 0.9];
   }
   update(dt, camera, e) {
-    const engaged = e.alive && (e.hp < e.hpMax || ['chase', 'attack', 'aim', 'retreat', 'stagger', 'hurt'].includes(e.state));
+    const engaged = S.enemyBars && e.alive && (e.hp < e.hpMax || ['chase', 'attack', 'aim', 'retreat', 'stagger', 'hurt'].includes(e.state));
     const want = engaged ? 1 : 0;
     this.alpha += (want - this.alpha) * (1 - Math.exp(-dt * (want ? 10 : 2)));
     if (this.alpha < 0.02) { this.group.visible = false; return; }

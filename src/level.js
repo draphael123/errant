@@ -8,7 +8,7 @@ import * as F from './forest.js';
 import { hash } from './world.js';
 
 export function buildLevel(scene, phys) {
-  const L = { spawn: new THREE.Vector3(0, 0, -3), shrines: [], gems: [], hearts: [], movers: [], crumblers: [], enemySpecs: [], banners: [], fires: [], areas: [] };
+  const L = { spawn: new THREE.Vector3(0, 0, -3), shrines: [], gems: [], hearts: [], movers: [], crumblers: [], enemySpecs: [], banners: [], fires: [], mists: [], areas: [] };
 
   const ground = (x, z, w, d, top, thick = 3, opts = {}) => { F.groundChunk(scene, { x, z, w, d, top, thick, seed: x * 7 + z * 13 + top, ...opts }); return phys.add(Box.fromTop(x, z, w, d, top, thick)); };
   const rock = (x, z, w, d, top, thick = 1.6) => { D.island(scene, { x, z, w, d, top, thick, seed: x * 3 + z * 5, kind: 'moss', tufts: false }); return phys.add(Box.fromTop(x, z, w, d, top, thick)); };
@@ -43,7 +43,7 @@ export function buildLevel(scene, phys) {
   D.crystals(scene, 8, 0, 0, 1); D.lantern(scene, -2.5, 0, -6.5); D.lantern(scene, 2.5, 0, -6.5, false);
   F.shaft(scene, -4, 0, -2); F.shaft(scene, 5, 0, 4, 16, 1.6);
   gem(-6, 0, 0); gem(6, 0, 3);
-  F.mist(scene, 0, -7, 26, 60, 40, 3);
+  L.mists.push(F.mist(scene, 0, -7, 26, 60, 40, 3));
 
   // ---------------- B. Stepping stones over the ravine (jump school)
   ground(0, 13, 5, 5, 0.5, 2.4, { seed: 2, plants: false }); F.fern(scene, 1.6, 0.5, 14.5, 7, 0.8);
@@ -75,7 +75,7 @@ export function buildLevel(scene, phys) {
   outTree('pine', -16.5, 4, 50, 41, 1.6); outTree('pine', 17, 4, 58, 42, 1.7); outTree('oak', -16.5, 5, 62, 43, 1.3); outTree('pine', 16.5, 5, 46, 44, 1.5);
 
   // ---------------- D. The gorge (rune-stones) + slinger ledge
-  F.mist(scene, 0, 0, 84, 40, 50, 3);
+  L.mists.push(F.mist(scene, 0, 0, 84, 40, 50, 3));
   mover(-6, 6, 72, 4, 4, [6, 6, 72], 5.2, 0);
   logP(0, 78.5, 4.2, 6.5, false); gem(0, 6.5, 78.5);
   mover(0, 7, 83, 4, 4, [0, 7, 91], 5.6, 0.25);
@@ -93,7 +93,7 @@ export function buildLevel(scene, phys) {
   const spiralPos = i => { const a = -Math.PI / 2 + i * Math.PI / 4; return { x: TX + Math.cos(a) * 6.6, z: TZ + Math.sin(a) * 6.6, y: 8.5 + i * 1.6, a }; };
   for (let i = 0; i < 12; i++) {
     const p = spiralPos(i);
-    if (i === 3 || i === 7 || i === 10) { crumble(p.x, p.y, p.z); continue; }
+    if (i === 3 || i === 7 || i === 10) { crumble(p.x, p.y, p.z); F.limb(scene, p.x, p.y - 1.0, p.z, TX, TZ, 0.28); continue; }
     const wide = i === 5 || i === 9; const w = wide ? 5 : 3.5;
     F.branch(scene, p.x, p.y, p.z, w, w, TX, TZ); phys.add(Box.fromTop(p.x, p.z, w, w, p.y, 0.9));
     if (i === 5) goblin('brute', p.x, p.y, p.z, { patrol: 0.8 });
@@ -102,10 +102,10 @@ export function buildLevel(scene, phys) {
   }
   { const p = spiralPos(12); mover(p.x, 27.6, p.z, 3.5, 3.5, [p.x, 33.2, p.z], 6.0, 0.5); }
   ground(TX, TZ, 8, 8, 33, 1.4, { seed: 8, plants: false });
-  for (let i = 0; i < 9; i++) { const a = -0.35 + i / 8 * Math.PI * 1.7 + Math.PI * 0.65; const r = 5.6 + hash(i * 3) * 1.2; F.canopyBlob(scene, TX + Math.cos(a) * r, 33.6 + hash(i) * 1.5, TZ + Math.sin(a) * r, 2.2 + hash(i * 7) * 0.8, i + 60); }
+  for (let i = 0; i < 9; i++) { const a = -0.35 + i / 8 * Math.PI * 1.7 + Math.PI * 0.65; const r = 5.6 + hash(i * 3) * 1.2; const bx = TX + Math.cos(a) * r, by = 33.6 + hash(i) * 1.5, bz = TZ + Math.sin(a) * r; F.canopyBlob(scene, bx, by, bz, 2.2 + hash(i * 7) * 0.8, i + 60); F.limb(scene, bx, by - 0.6, bz, TX, TZ, 0.35); }
   shrine(-2.2, 33, 110, 'The Treetop'); heart(2.5, 33, 110.5); gem(2.5, 33, 113.5);
   D.lantern(scene, 2.8, 33, 108.8); D.sign(scene, -2.8, 33, 114.5, 'THE WARDEN\nWAITS BEYOND', 0);
-  F.mist(scene, 0, 2, 112, 40, 40, 3);
+  L.mists.push(F.mist(scene, 0, 2, 112, 40, 40, 3));
 
   // ---------------- F. The Warden's Glade
   rock(0, 122, 4, 4, 34); gem(0, 34, 122);
@@ -126,7 +126,7 @@ export function buildLevel(scene, phys) {
   L.enemySpecs.push({ type: 'warden', x: 0, y: 36, z: 151 });
   L.portal = D.portal(scene, 0, 36, 146);
   heart(-8, 36, 138.5);
-  F.mist(scene, 0, 30, 146, 50, 50, 3);
+  L.mists.push(F.mist(scene, 0, 30, 146, 50, 50, 3));
 
   L.gemTotal = L.gems.length;
   return L;

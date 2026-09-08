@@ -17,6 +17,8 @@ import { HUD } from './hud.js';
 import { Player } from './player.js';
 import { spawnEnemies, updateProjectiles } from './enemies.js';
 import { Tutorial } from './tutorial.js';
+import { bakeStatics } from './bake.js';
+import { WorldMap } from './worldmap.js';
 
 const $ = id => document.getElementById(id);
 const KILL_Y_BELOW = 22;
@@ -46,7 +48,7 @@ function buildComposer(scene) {
 }
 function resize() {
   const w = window.innerWidth || renderer.domElement.clientWidth || 1280, h = window.innerHeight || renderer.domElement.clientHeight || 720;
-  const pr = Math.min(window.devicePixelRatio || 1, 2) * S.renderScale;
+  const pr = Math.min(window.devicePixelRatio || 1, parseFloat(S.dpr) || 1.5) * S.renderScale;
   renderer.setPixelRatio(pr); renderer.setSize(w, h, true);
   if (composer) { composer.setPixelRatio(pr); composer.setSize(w, h); }
   camera.aspect = w / h; camera.updateProjectionMatrix();
@@ -62,16 +64,21 @@ const fx = new FX(scene);
 const hud = new HUD();
 const input = new Input(renderer.domElement);
 const level = buildLevel(scene, phys);
+const baked = bakeStatics(scene); console.log('ERRANT baked statics', baked);
+renderer.info.autoReset = false;
 const followCam = new FollowCamera(camera, phys);
+const worldMap = new WorldMap(renderer, input);
+// every sound goes through here so the F3 overlay can show what just played
+const sfxLog = []; const sfxL = (n, o) => { sfxLog.push(n + ' @' + (performance.now() / 1000).toFixed(1)); if (sfxLog.length > 8) sfxLog.shift(); return sfx(n, o); };
 
 const game = {
-  scene, phys, fx, hud, sfx, camera, level, input, renderer,
+  scene, phys, fx, hud, sfx: sfxL, camera, level, input, renderer,
   player: null, enemies: [], projectiles: [], time: 0, state: 'title', mode: 'adventure',
   checkpoint: level.shrines[0], stats: { deaths: 0, gems: 0, start: 0, elapsed: 0, kills: 0 },
   bossActive: false, boss: null, dummy: null, won: false, winSoon: 0, falling: false, tutorialShown: new Set(),
   onEnemyDied(e) { this.stats.kills++; if (e.isBoss) this.winSoon = 2.6; },
 };
-game.player = new Player(scene, phys, fx, sfx, hud);
+game.player = new Player(scene, phys, fx, sfxL, hud);
 const tutorial = new Tutorial(game);
 
 function resetRun(mode) {
@@ -99,6 +106,7 @@ function resetRun(mode) {
 
 // ---------------- screens
 const screens = ['title', 'settings', 'controls', 'pause', 'dead', 'victory'];
+function openMap() { initAudio(); setState('map'); show(null); worldMap.show(worldMap.cur); }
 let settingsReturn = 'title';
 function show(name) { for (const s of screens) $(s).hidden = s !== name; }
 function setState(st) {
@@ -108,7 +116,7 @@ function setState(st) {
   else { input.wantLock = false; input.unlock(); }
 }
 function startGame(mode = 'adventure') {
-  initAudio(); resetRun(mode); setState('playing'); startMusic('explore');
+  worldMap.hide(); initAudio(); resetRun(mode); setState('playing'); startMusic('explore');
   $('fade').style.opacity = 0;
   if (mode === 'tutorial') { hud.toast('THE TRAINING YARD', 2.2); }
   else { hud.toast('THE LANDING', 2.2); hud.hint('Reach the courtyard beyond the stepping stones.', 5); }
@@ -116,7 +124,7 @@ function startGame(mode = 'adventure') {
 // the title theme can only start after a gesture: first click or key on the title screen
 function titleMusic() { if (game.state === 'title') { initAudio(); startMusic('title'); } }
 window.addEventListener('pointerdown', titleMusic); window.addEventListener('keydown', titleMusic);
-$('btn-play').onclick = () => { sfx('ui'); startGame('adventure'); };
+$('btn-play').onclick = () => { sfx('ui'); openMap(); };
 $('btn-tutorial').onclick = () => { sfx('ui'); startGame('tutorial'); };
 $('btn-settings').onclick = () => { initAudio(); sfx('ui'); settingsReturn = 'title'; renderSettings($('settings-rows')); show('settings'); };
 $('btn-controls').onclick = () => { initAudio(); sfx('ui'); settingsReturn = 'title'; show('controls'); };
@@ -129,7 +137,7 @@ $('btn-pause-controls').onclick = () => { sfx('ui'); settingsReturn = 'pause'; s
 $('btn-respawn').onclick = () => { sfx('ui'); returnToShrine(false); resume(); };
 $('btn-quit').onclick = () => { sfx('ui'); tutorial.stop(); setState('title'); show('title'); startMusic('title'); };
 $('btn-dead-continue').onclick = () => { sfx('ui'); returnToShrine(true); setState('playing'); };
-$('btn-victory-again').onclick = () => { sfx('ui'); startGame('adventure'); };
+$('btn-victory-again').onclick = () => { sfx('ui'); openMap(); };
 $('btn-victory-title').onclick = () => { sfx('ui'); setState('title'); show('title'); startMusic('title'); };
 
 function pause() { if (game.state !== 'playing') return; setState('paused'); show('pause'); sfx('ui'); }
@@ -139,6 +147,7 @@ window.addEventListener('keydown', e => {
     if (game.state === 'playing') pause();
     else if (game.state === 'paused') { if (!$('pause').hidden) resume(); else show('pause'); }
     else if (game.state === 'title' && $('title').hidden) show('title');
+    else if (game.state === 'map') { /* handled by the map via input */ }
   }
 });
 document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && game.state === 'playing') setTimeout(() => { if (game.state === 'playing' && !input.locked) pause(); }, 50); });
@@ -147,7 +156,9 @@ window.addEventListener('blur', () => { if (game.state === 'playing') pause(); }
 onSetting((k) => {
   if (['master', 'music', 'sfx'].includes(k)) applyVolumes();
   if (k === 'shadows') world.applyShadowSetting();
-  if (k === 'renderScale') resize();
+  if (k === 'renderScale' || k === 'dpr') resize();
+  if (k === 'mist') for (const g of level.mists) g.visible = S.mist;
+  if (k === 'fps') $('perf').hidden = !S.fps;
 });
 
 function returnToShrine(afterDeath) {
@@ -191,8 +202,8 @@ function updateGame(dt) {
   const camF = followCam.forward();
   p.stats.lookMoved += Math.abs(input.mdx) * 0.002 + Math.abs(input.rstick.x) * dt * 2 + ((input.held('camL') || input.held('camR')) ? dt : 0);
   p.update(dt, input, camF, game);
-  updateLevel(level, dt, game.time, p, sfx);
-  for (const e of game.enemies) e.update(dt);
+  updateLevel(level, dt, game.time, p, sfxL);
+  for (const e of game.enemies) { const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, dy = e.pos.y - p.pos.y; const far = dx * dx + dz * dz + dy * dy > 75 * 75; if (e.alive) e.rig.group.visible = !far; if (!far || e.isBoss || S.farEnemies) e.update(dt); }
   updateProjectiles(game, dt);
   fx.update(dt);
   tutorial.update(dt, input);
@@ -227,13 +238,18 @@ function updateGame(dt) {
 }
 
 // ---------------- frame loop with a watchdog (embedded panes can starve rAF)
-let last = performance.now(), lastTickAt = 0, rafQueued = false;
-function render() { if (S.postfx && composer) composer.render(); else renderer.render(scene, camera); }
+let last = performance.now(), lastTickAt = 0, lastRafAt = performance.now(), rafQueued = false;
+const perf = { el: $('perf'), frames: 0, acc: 0, cpu: 0, fps: 0, ms: 0, calls: 0, tris: 0, detail: false, t: 0 };
+window.addEventListener('keydown', e => { if (e.code === 'F3') { e.preventDefault(); perf.detail = !perf.detail; if (perf.detail) { setSetting('fps', true); } perf.el.hidden = !S.fps; } });
+perf.el.hidden = !S.fps;
+function render() { renderer.info.reset(); if (game.state === 'map') worldMap.render(); else if (S.postfx && composer) composer.render(); else renderer.render(scene, camera); }
 function tick(now) {
   lastTickAt = now;
+  const t0 = performance.now();
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
   input.pollGamepad();
-  if (game.state === 'playing' || game.state === 'dead') {
+  if (game.state === 'map') { worldMap.update(dt, n => startGame(n.mode), () => { setState('title'); show('title'); worldMap.hide(); }); }
+  else if (game.state === 'playing' || game.state === 'dead') {
     if (fx.freeze > 0) { fx.freeze -= dt; dt *= 0.05; }
     updateGame(dt);
   } else if (game.state === 'title') {
@@ -242,14 +258,21 @@ function tick(now) {
   } else { world.update(dt, game.time, game.player.pos, camera); }
   render();
   input.endFrame();
+  // frame counter: sampled 4× a second
+  perf.frames++; perf.acc += dt; perf.cpu += performance.now() - t0;
+  if (perf.acc >= 0.25) { perf.fps = Math.round(perf.frames / perf.acc); perf.ms = (perf.cpu / perf.frames).toFixed(1); perf.calls = renderer.info.render.calls; perf.tris = renderer.info.render.triangles; perf.frames = 0; perf.acc = 0; perf.cpu = 0;
+    if (S.fps) perf.el.textContent = perf.fps + ' fps  ' + perf.ms + ' ms  ' + perf.calls + ' draws' + (perf.detail ? '\n' + (perf.tris / 1000).toFixed(0) + 'k tris  ' + renderer.domElement.width + '×' + renderer.domElement.height + '  dpr ' + renderer.getPixelRatio().toFixed(2) + '\nsfx: ' + (sfxLog.slice(-6).join('  ') || '-') + '\nstate ' + game.state + ' / ' + game.player.state + (input.locked ? ' locked' : '') : ''); }
 }
-function frame(now) { rafQueued = false; try { tick(now); } catch (e) { console.error(e); } if (!rafQueued) { rafQueued = true; requestAnimationFrame(frame); } }
-rafQueued = true; requestAnimationFrame(frame);
-setInterval(() => { if (performance.now() - lastTickAt > 40) frame(performance.now()); }, 16);
+function frame(now) { rafQueued = false; try { tick(now); } catch (e) { console.error(e); } if (!rafQueued) { rafQueued = true; requestAnimationFrame(rafFrame); } }
+function rafFrame(now) { lastRafAt = now; frame(now); }
+rafQueued = true; requestAnimationFrame(rafFrame);
+// Fallback only when requestAnimationFrame has genuinely stopped (embedded panes); a merely slow frame must not
+// trigger extra ticks or the load doubles.
+setInterval(() => { const now = performance.now(); if (now - lastRafAt > 300 && now - lastTickAt > 40) frame(now); }, 16);
 
 // ---------------- debug / test API
 window.ERRANT = {
-  game, S, setSetting, tutorial, start: startGame,
+  game, S, setSetting, tutorial, start: startGame, map: worldMap, openMap, perf, sfxLog,
   state() { const p = game.player; return { state: game.state, mode: game.mode, player: { pos: p.pos.toArray().map(n => +n.toFixed(2)), vel: p.vel.toArray().map(n => +n.toFixed(2)), st: p.state, hp: p.hp, sta: Math.round(p.stamina), ground: p.body.onGround, yaw: +p.yaw.toFixed(2), stats: p.stats }, enemies: game.enemies.map(e => ({ n: e.name, st: e.state, hp: e.hp, alive: e.alive, pos: e.pos.toArray().map(n => +n.toFixed(1)) })), gems: game.stats.gems, boss: game.bossActive, checkpoint: game.checkpoint.name, tutorialStep: tutorial.active ? tutorial.step && tutorial.step.id : null }; },
   teleport(x, y, z) { game.player.pos.set(x, y, z); game.player.vel.set(0, 0, 0); game.player.lastGround.set(x, y, z); if (game.player.state === 'dead') game.player.state = 'idle'; followCam.reset(game.player.pos, game.player.yaw); },
   go(where) { const P = { landing: [0, 0, -3], stones: [0, 0.5, 13], courtyard: [0, 6, 47], camp: [0, 6, 47], bridge: [0, 6, 64], ledge: [0, 7.5, 95], spiral: [0, 8.5, 105.4], cap: [0, 33, 112], arena: [0, 36, 136] }; const p = P[where]; if (p) this.teleport(...p); return p; },

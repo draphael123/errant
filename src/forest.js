@@ -24,7 +24,7 @@ const FM = {
 export { FM };
 
 function m(geo, mat, x = 0, y = 0, z = 0, cast = true) { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = cast; o.receiveShadow = true; return o; }
-function freeze(o) { o.traverse(c => { c.matrixAutoUpdate = false; c.updateMatrix(); }); return o; }
+function freeze(o) { o.traverse(c => { c.matrixAutoUpdate = false; c.updateMatrix(); }); o.userData.static = true; return o; }
 const G = { fern: new THREE.ConeGeometry(0.5, 1.4, 3), tuft: new THREE.ConeGeometry(0.12, 0.45, 4), flower: new THREE.SphereGeometry(0.08, 6, 5) };
 // crossed quads for a grass clump: two vertical planes at 90°, pivot at the base
 function crossQuadGeometry(w = 0.9, h = 0.7) {
@@ -224,4 +224,12 @@ export function outcrop(scene, phys, x, z, top, size = 4, seed = 1) {
   groundChunk(scene, { x, z, w: size, d: size, top, thick: 3 + hash(seed) * 2, seed, plants: true });
   if (phys) { const { Box } = phys; }
   return { x, z, top };
+}
+
+// A limb from a point out to the trunk (for planks and canopy that would otherwise hang in the air).
+export function limb(scene, x, y, z, tx, tz, r = 0.32) {
+  const dx = tx - x, dz = tz - z; const len = Math.hypot(dx, dz) + 0.6;
+  const g = new THREE.Group(); g.position.set(x, y, z);
+  const c = m(new THREE.CylinderGeometry(r * 0.8, r * 1.4, len, 7), MAT.bark, dx / 2, -0.4, dz / 2); c.lookAt(new THREE.Vector3(x + dx, y - 1.2, z + dz)); c.rotateX(Math.PI / 2); g.add(c);
+  scene.add(freeze(g)); return g;
 }

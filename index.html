@@ -103,6 +103,14 @@
   #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(255,0,0,0) 50%, rgba(200,20,30,.55) 100%); opacity: 0; transition: opacity .12s; }
   #lowhp { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(255,0,0,0) 55%, rgba(120,0,10,.5) 100%); opacity: 0; }
   #lockhint { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); font-size: 12px; letter-spacing: .14em; color: #d7c8a8; opacity: .8; text-shadow: 0 1px 4px #000; }
+  #perf { position: fixed; right: 24px; top: 74px; z-index: 12; font-family: ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5; color: #d8ffd0; background: rgba(6, 10, 8, .7); border: 1px solid rgba(120, 200, 120, .3); border-radius: 4px; padding: 6px 10px; white-space: pre; pointer-events: none; }
+  #perf[hidden] { display: none; }
+  #mapui { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 20; width: min(640px, 90vw); text-align: center; background: var(--paper); border: 1px solid var(--edge); border-radius: 6px; padding: 14px 22px 16px; backdrop-filter: blur(6px); box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+  #mapui[hidden] { display: none; }
+  #mapui .orn { justify-content: center; margin: 0 0 4px; }
+  #mapui .name { font-family: "Cinzel Decorative", Cinzel, serif; font-size: 30px; color: var(--gold); letter-spacing: .1em; }
+  #mapui .blurb { font-size: 18px; color: #efe2c4; margin: 4px 0 8px; min-height: 22px; }
+  #mapui .hint { font-family: Cinzel, serif; font-size: 12px; letter-spacing: .12em; color: #c9b892; }
   /* objective card (tutorial) */
   #objective { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); width: min(560px, 86vw); background: var(--paper); border: 1px solid var(--edge); border-radius: 6px; padding: 12px 18px 14px 56px; font-family: "Crimson Pro", serif; box-shadow: 0 10px 30px rgba(0,0,0,.5); transition: transform .2s, border-color .3s; }
   #objective[hidden] { display: none; }
@@ -138,6 +146,7 @@
   </div>
   <div id="gems"><span class="g"></span><span id="gemcount">0</span><span style="opacity:.6">/</span><span id="gemtotal">0</span></div>
   <div id="lockhint">CLICK TO CAPTURE THE MOUSE · ESC TO PAUSE</div>
+  <div id="perf" hidden></div>
   <div id="toast"></div>
   <div id="objective" hidden><div class="check" id="obj-check"></div><div class="kicker" id="obj-kicker">TRAINING</div><div class="title" id="obj-title"></div><div class="text" id="obj-text"></div></div>
   <div id="hint"></div>
@@ -155,7 +164,7 @@
     <button class="m" id="btn-controls">Controls</button>
   </div>
   <div class="foot"><b>WASD</b> move · <b>SPACE</b> jump, again to double · <b>LMB</b> strike · <b>E</b> heavy · <b>RMB</b> guard · <b>SHIFT</b> roll · gamepad supported</div>
-  <div class="ver">ERRANT · v0.3 · music: Joth, pauliuw (CC0)</div>
+  <div class="ver">ERRANT · v0.4 · music: Joth, pauliuw (CC0)</div>
 </div>
 
 <div id="settings" class="screen" hidden>
@@ -178,7 +187,7 @@
       <tr><td>Guard</td><td>hold <kbd>RMB</kbd> or <kbd>L</kbd> <span class="pad">LB / RB</span> · blocks from the front, drains vigour · a guard raised just before a hit lands <em>parries</em> and staggers the attacker</td></tr>
       <tr><td>Roll</td><td><kbd>Shift</kbd> <span class="pad">B</span> · invulnerable through the middle of the roll · can cancel the end of a strike</td></tr>
       <tr><td>Camera</td><td>mouse when captured <span class="pad">right stick</span> · <kbd>[</kbd> <kbd>]</kbd> turn without the mouse · the camera swings behind you while you run (Settings)</td></tr>
-      <tr><td>Pause</td><td><kbd>Esc</kbd> <span class="pad">Start</span> · <kbd>N</kbd> <span class="pad">Select</span> skips a tutorial step</td></tr>
+      <tr><td>Pause</td><td><kbd>Esc</kbd> <span class="pad">Start</span> · <kbd>N</kbd> <span class="pad">Select</span> skips a tutorial step · <kbd>F3</kbd> frame counter detail</td></tr>
     </table>
     </div>
     <div class="btnrow"><button class="m" id="btn-controls-back">Back</button></div>
@@ -212,6 +221,12 @@
   <div class="menu"><button class="m primary" id="btn-victory-again">Set Forth Again</button><button class="m" id="btn-victory-title">Title</button></div>
 </div>
 
+<div id="mapui" hidden>
+  <div class="orn">CHOOSE YOUR ROAD</div>
+  <div class="name" id="map-name">Goblin Wood</div>
+  <div class="blurb" id="map-blurb"></div>
+  <div class="hint" id="map-hint"></div>
+</div>
 <div id="boot">SUMMONING THE SKY…</div>
 
 <script>
