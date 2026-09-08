@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ERRANT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+  :root {
+    --gold: #e7c26a; --gold-dim: #a8873a; --ink: #1a1220; --paper: rgba(20, 14, 30, 0.82);
+    --paper-edge: rgba(231, 194, 106, 0.35); --hp: #e5484d; --sta: #6fd68a; --poise: #f2b134;
+    --steel: #9fd3ff;
+  }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1430; color: #f3e9d2; font-family: "Crimson Pro", Georgia, serif; }
+  canvas { display: block; }
+  #app { position: fixed; inset: 0; }
+  .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; z-index: 20; }
+  .screen[hidden] { display: none !important; }
+  h1.logo { font-family: Cinzel, Georgia, serif; font-weight: 900; font-size: clamp(56px, 11vw, 132px); letter-spacing: 0.14em; margin: 0; line-height: 1;
+    background: linear-gradient(180deg, #fff3c9 0%, #e7c26a 45%, #9a6d22 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 4px 0 rgba(60, 30, 10, 0.6)) drop-shadow(0 0 28px rgba(231, 194, 106, 0.35)); }
+  .tag { font-style: italic; font-size: clamp(16px, 2.2vw, 24px); color: #e9d9b8; opacity: 0.9; margin: 10px 0 34px; letter-spacing: 0.04em; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+  .menu { display: flex; flex-direction: column; gap: 12px; min-width: 260px; }
+  button.m { font-family: Cinzel, Georgia, serif; font-weight: 700; font-size: 20px; letter-spacing: 0.12em; color: var(--gold);
+    background: linear-gradient(180deg, rgba(40, 28, 58, 0.92), rgba(18, 12, 28, 0.92)); border: 1px solid var(--paper-edge); border-radius: 6px;
+    padding: 12px 28px; cursor: pointer; text-transform: uppercase; transition: transform .08s, box-shadow .12s, border-color .12s; }
+  button.m:hover { transform: translateY(-1px); border-color: var(--gold); box-shadow: 0 0 22px rgba(231,194,106,0.25); }
+  button.m:active { transform: translateY(1px); }
+  button.m:disabled { opacity: .45; cursor: not-allowed; }
+  .panel { background: var(--paper); border: 1px solid var(--paper-edge); border-radius: 10px; padding: 22px 28px; backdrop-filter: blur(6px); max-width: 640px; width: min(92vw, 640px); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .panel h2 { font-family: Cinzel, Georgia, serif; color: var(--gold); margin: 0 0 14px; letter-spacing: .1em; font-size: 22px; text-align: center; }
+  .row { display: grid; grid-template-columns: 1fr 200px; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px dashed rgba(231,194,106,.12); font-size: 17px; }
+  .row:last-child { border-bottom: 0; }
+  .row label { color: #f3e9d2; }
+  .row small { display: block; color: #b8a888; font-size: 13px; }
+  .row input[type=range] { width: 100%; accent-color: var(--gold); }
+  .row select { width: 100%; background: #221a33; color: #f3e9d2; border: 1px solid var(--paper-edge); border-radius: 4px; padding: 5px; font-family: inherit; font-size: 15px; }
+  .row .val { color: var(--gold); font-variant-numeric: tabular-nums; min-width: 42px; text-align: right; }
+  .row .ctl { display: flex; align-items: center; gap: 8px; }
+  .toggle { width: 46px; height: 24px; border-radius: 12px; background: #3a2f4d; border: 1px solid var(--paper-edge); position: relative; cursor: pointer; }
+  .toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #8a7a6a; transition: left .12s, background .12s; }
+  .toggle.on { background: #3f5a3a; } .toggle.on::after { left: 25px; background: var(--sta); }
+  .btnrow { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+  .btnrow button.m { font-size: 15px; padding: 9px 18px; }
+  .scroll { max-height: 62vh; overflow-y: auto; padding-right: 6px; }
+  table.keys { border-collapse: collapse; width: 100%; font-size: 17px; }
+  table.keys td { padding: 6px 8px; border-bottom: 1px dashed rgba(231,194,106,.12); }
+  table.keys td:first-child { color: var(--gold); font-family: Cinzel, serif; font-size: 14px; letter-spacing: .06em; white-space: nowrap; }
+  kbd { font-family: Cinzel, serif; font-size: 13px; background: #2b2140; border: 1px solid var(--paper-edge); border-bottom-width: 3px; border-radius: 4px; padding: 1px 7px; color: #fff; }
+  #title { background: radial-gradient(ellipse at 50% 30%, rgba(60,40,100,0.0), rgba(10,6,20,0.55) 70%); }
+  #title .foot { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; font-size: 13px; color: #b8a888; letter-spacing: .08em; }
+  #boot { position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); z-index: 30; background: var(--paper); border: 1px solid var(--paper-edge); border-radius: 6px; padding: 8px 16px; font-size: 14px; color: #e9d9b8; letter-spacing: .06em; }
+  #boot.err { color: #ff9a8a; border-color: #b8402f; white-space: pre-wrap; max-width: 80vw; }
+  #boot[hidden] { display: none; }
+
+  /* HUD */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; font-family: Cinzel, serif; }
+  #hud[hidden] { display: none; }
+  #vitals { position: absolute; left: 22px; top: 18px; }
+  #hearts { display: flex; gap: 6px; margin-bottom: 8px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.6)); }
+  .heart { width: 26px; height: 26px; background: var(--hp); clip-path: polygon(50% 100%, 6% 55%, 0 30%, 12% 8%, 30% 2%, 50% 18%, 70% 2%, 88% 8%, 100% 30%, 94% 55%); transition: transform .12s; }
+  .heart.empty { background: rgba(60,20,30,.65); }
+  .heart.pop { transform: scale(1.35); }
+  .bar { height: 10px; width: 220px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.18); border-radius: 5px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 100%; background: var(--sta); transition: width .06s linear; }
+  .bar > i.low { background: #d9573a; }
+  #gems { position: absolute; right: 24px; top: 18px; display: flex; align-items: center; gap: 8px; font-size: 20px; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
+  #gems .g { width: 16px; height: 16px; background: #7ff0ff; transform: rotate(45deg); box-shadow: 0 0 12px #7ff0ff; }
+  #hint { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); font-family: "Crimson Pro", serif; font-size: 20px; color: #f7ecd4; text-shadow: 0 2px 8px rgba(0,0,0,.85); text-align: center; opacity: 0; transition: opacity .3s; max-width: 80vw; }
+  #hint.show { opacity: 1; }
+  #toast { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font-size: clamp(22px, 3.4vw, 40px); letter-spacing: .18em; color: var(--gold); text-shadow: 0 3px 14px rgba(0,0,0,.8); opacity: 0; transition: opacity .35s; text-transform: uppercase; }
+  #toast.show { opacity: 1; }
+  #bossbar { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); width: min(560px, 80vw); opacity: 0; transition: opacity .5s; }
+  #bossbar.show { opacity: 1; }
+  #bossbar .name { text-align: center; font-size: 15px; letter-spacing: .2em; color: #ffd7c2; text-shadow: 0 2px 6px #000; margin-bottom: 4px; }
+  #bossbar .bar { width: 100%; height: 12px; }
+  #bossbar .bar > i { background: linear-gradient(90deg, #c0392b, #ff6b4a); }
+  #bossbar .bar.poise { height: 5px; margin-top: 3px; } #bossbar .bar.poise > i { background: var(--poise); }
+  #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(255,0,0,0) 50%, rgba(200,20,30,.55) 100%); opacity: 0; transition: opacity .12s; }
+  #lowhp { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(255,0,0,0) 55%, rgba(120,0,10,.5) 100%); opacity: 0; }
+  #crosshair { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: rgba(255,255,255,.35); }
+  #dead h1, #victory h1 { font-family: Cinzel, serif; font-weight: 900; font-size: clamp(40px, 8vw, 92px); letter-spacing: .2em; margin: 0 0 8px; }
+  #dead { background: rgba(40, 0, 8, .55); } #dead h1 { color: #ff6b6b; text-shadow: 0 0 30px rgba(255,60,60,.6); }
+  #victory { background: rgba(10, 6, 20, .6); } #victory h1 { color: var(--gold); text-shadow: 0 0 30px rgba(231,194,106,.6); }
+  .stats { font-size: 20px; color: #e9d9b8; margin: 8px 0 24px; text-align: center; line-height: 1.6; }
+  #pause { background: rgba(10, 6, 20, .55); }
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 15; transition: opacity .25s; }
+  #lockhint { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); font-size: 12px; letter-spacing: .12em; color: #d7c8a8; opacity: .8; text-shadow: 0 1px 4px #000; }
+  @media (max-width: 720px) { .row { grid-template-columns: 1fr 140px; } .bar { width: 160px; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="fade"></div>
+
+<div id="hud" hidden>
+  <div id="vignette"></div><div id="lowhp"></div>
+  <div id="vitals">
+    <div id="hearts"></div>
+    <div class="bar"><i id="stamina"></i></div>
+  </div>
+  <div id="gems"><span class="g"></span><span id="gemcount">0</span><span style="opacity:.6">/</span><span id="gemtotal">0</span></div>
+  <div id="lockhint">CLICK TO CAPTURE MOUSE · ESC TO PAUSE</div>
+  <div id="toast"></div>
+  <div id="hint"></div>
+  <div id="bossbar"><div class="name" id="bossname">THE HOLLOW WARDEN</div><div class="bar"><i id="bosshp"></i></div><div class="bar poise"><i id="bosspoise"></i></div></div>
+  <div id="crosshair" hidden></div>
+</div>
+
+<div id="title" class="screen">
+  <h1 class="logo">ERRANT</h1>
+  <div class="tag">a knight, a sword, and a sky of broken stones</div>
+  <div class="menu">
+    <button class="m" id="btn-play">Set Forth</button>
+    <button class="m" id="btn-settings">Settings</button>
+    <button class="m" id="btn-controls">Controls</button>
+  </div>
+  <div class="foot">WASD move · SPACE jump (twice) · LMB / J strike · E / K heavy · RMB / L guard · SHIFT roll · mouse to look</div>
+</div>
+
+<div id="settings" class="screen" hidden>
+  <div class="panel">
+    <h2>SETTINGS</h2>
+    <div class="scroll" id="settings-rows"></div>
+    <div class="btnrow"><button class="m" id="btn-settings-reset">Defaults</button><button class="m" id="btn-settings-back">Back</button></div>
+  </div>
+</div>
+
+<div id="controls" class="screen" hidden>
+  <div class="panel">
+    <h2>CONTROLS</h2>
+    <table class="keys">
+      <tr><td>Move</td><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys · relative to the camera</td></tr>
+      <tr><td>Jump</td><td><kbd>Space</kbd> · hold for height · press again in the air to double jump</td></tr>
+      <tr><td>Strike</td><td><kbd>LMB</kbd> or <kbd>J</kbd> · three strikes chain · works in the air</td></tr>
+      <tr><td>Heavy</td><td><kbd>E</kbd> or <kbd>K</kbd> · slow, cannot be interrupted, breaks poise</td></tr>
+      <tr><td>Guard</td><td>hold <kbd>RMB</kbd> or <kbd>L</kbd> · blocks from the front, drains stamina · a guard raised just before a hit lands staggers the attacker</td></tr>
+      <tr><td>Roll</td><td><kbd>Shift</kbd> · invulnerable through the middle of the roll</td></tr>
+      <tr><td>Camera</td><td>mouse when captured · <kbd>Q</kbd> / <kbd>E</kbd>-free: use <kbd>[</kbd> <kbd>]</kbd> to turn without the mouse</td></tr>
+      <tr><td>Pause</td><td><kbd>Esc</kbd></td></tr>
+    </table>
+    <div class="btnrow"><button class="m" id="btn-controls-back">Back</button></div>
+  </div>
+</div>
+
+<div id="pause" class="screen" hidden>
+  <div class="panel" style="text-align:center">
+    <h2>PAUSED</h2>
+    <div class="menu" style="align-items:center">
+      <button class="m" id="btn-resume">Resume</button>
+      <button class="m" id="btn-pause-settings">Settings</button>
+      <button class="m" id="btn-pause-controls">Controls</button>
+      <button class="m" id="btn-respawn">Return to Shrine</button>
+      <button class="m" id="btn-quit">Quit to Title</button>
+    </div>
+  </div>
+</div>
+
+<div id="dead" class="screen" hidden>
+  <h1>FALLEN</h1>
+  <div class="stats" id="dead-stats">The shrine calls you back.</div>
+  <button class="m" id="btn-dead-continue">Rise Again</button>
+</div>
+
+<div id="victory" class="screen" hidden>
+  <h1>THE WARDEN FALLS</h1>
+  <div class="stats" id="victory-stats"></div>
+  <div class="menu"><button class="m" id="btn-victory-again">Set Forth Again</button><button class="m" id="btn-victory-title">Title</button></div>
+</div>
+
+<div id="boot">SUMMONING THE SKY…</div>
+
+<script>
+  // Plain, non-module boot watchdog: a CDN/module failure must never be a silent dead title screen.
+  (function () {
+    var boot = document.getElementById('boot');
+    function fail(msg) {
+      boot.hidden = false; boot.className = 'err'; boot.textContent = 'The game failed to start:\n' + msg;
+      ['btn-play', 'btn-settings', 'btn-controls'].forEach(function (id) { var b = document.getElementById(id); if (b) b.disabled = true; });
+    }
+    window.__errantFail = fail;
+    if (location.protocol === 'file:') fail('ES modules cannot load over file://. Run "node serve.mjs" and open http://localhost:5850.');
+    window.addEventListener('error', function (e) { if (!window.ERRANT) fail(e.message + (e.filename ? '\n' + e.filename.split('/').pop() + ':' + e.lineno : '')); });
+    window.addEventListener('unhandledrejection', function (e) { if (!window.ERRANT) fail(String(e.reason && e.reason.message || e.reason)); });
+    setTimeout(function () { if (!window.ERRANT) fail('Timed out after 10s waiting for the engine. Hard-refresh (Ctrl+Shift+R).'); }, 10000);
+  })();
+</script>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js" } }
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
