@@ -162,7 +162,7 @@ export function buildLevel(scene, phys) {
 
   // ================= H. The Canopy Walk (three tree crowns joined by rope bridges, y 35 → 31)
   L.areas.push({ name: 'THE CANOPY WALK', z0: 173, z1: 205, y: 30 });
-  const crown = (x, z, top, seed) => { F2.canopyTree(scene, x, -34, z, top + 34 - 2, 9, seed); ground(x, z, 7, 7, top, 1.2, { seed, plants: false }); F.limb(scene, x, top - 0.6, z, x, z + 0.01, 0.2); prop('crown', x, top, z); };
+  const crown = (x, z, top, seed) => { F2.canopyTree(scene, x, -34, z, top + 34 - 7.5, 9, seed); ground(x, z, 7, 7, top, 1.2, { seed, plants: false }); F.limb(scene, x, top - 0.6, z, x, z + 0.01, 0.2); prop('crown', x, top, z); };
   crown(11, 182, 35, 11); crown(0, 196, 33.5, 12); crown(-2, 209, 31, 13);
   F2.ropeBridge(scene, phys, [2.5, 35.5, 171.5], [8.5, 35, 179.5], 1.9, 0.9);
   F2.ropeBridge(scene, phys, [9, 35, 185.5], [1.5, 33.5, 193.5], 1.9, 1.1);
