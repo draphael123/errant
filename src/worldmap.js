@@ -5,6 +5,7 @@ import { buildKnight } from './rigs.js';
 import { MAT } from './decor.js';
 import * as F from './forest.js';
 import { sfx } from './audio.js';
+import { CharacterModel, has as hasModel } from './models.js';
 
 export const NODES = [
   { id: 'training', name: 'Training Yard', blurb: 'Learn the blade, the guard and the roll against a straw knight.', mode: 'tutorial', x: -16, z: 2 },
@@ -53,6 +54,7 @@ export class WorldMap {
     for (const [x, z] of [[-13, -4], [3, 4], [12, 5], [-2, -6], [-8, 4]]) F.fern(scene, x, 0, z, x + z);
     // the token
     this.rig = buildKnight({ scale: 0.9 }); scene.add(this.rig.group); this.rig.group.position.set(NODES[1].x, 0.4, NODES[1].z);
+    this.token = hasModel('knight') ? new CharacterModel('knight', { height: 1.6 }) : null; if (this.token) { scene.add(this.token.group); this.rig.group.visible = false; }
     this.ui = document.getElementById('mapui'); this.uiName = document.getElementById('map-name'); this.uiBlurb = document.getElementById('map-blurb'); this.uiHint = document.getElementById('map-hint');
     this.camPos = new THREE.Vector3(); this.camLook = new THREE.Vector3();
   }
@@ -77,10 +79,10 @@ export class WorldMap {
     }
     if (inp.pressed.has('Escape') || inp.pressed.has('Pad1')) { onBack(); return; }
     // token hop
-    const g = this.rig.group;
+    const g = this.token ? this.token.group : this.rig.group;
     if (this.hop) { this.hop.t += dt / 0.45; const u = Math.min(1, this.hop.t); g.position.lerpVectors(this.hop.from, this.hop.to, u); g.position.y = 0.4 + Math.sin(u * Math.PI) * 1.4; g.rotation.y = Math.atan2(this.hop.to.x - this.hop.from.x, this.hop.to.z - this.hop.from.z); if (u >= 1) { this.hop = null; sfx('land', {}); } }
     const q = this.hop ? { hipR: -0.9, hipL: 0.3, kneeR: 1.2, kneeL: 0.4, armR: { x: -0.7, y: 0, z: 0.6 }, armL: { x: -0.5, y: 0, z: -0.6 }, cape: 0.6, browY: 0.01, mouthW: 1.4, mouthOpen: 0.1 } : { hipR: 0, hipL: 0, kneeR: 0, kneeL: 0, armR: { x: 0.12, y: 0, z: 0.14 }, armL: { x: 0.08, y: 0, z: -0.16 }, foreR: -0.25, foreL: -0.35, foreLy: 0.3, bodyY: Math.sin(this.time * 2) * 0.012, cape: 0.05, headY: Math.sin(this.time * 0.7) * 0.2, mouthW: 1.3, browY: 0.005 };
-    this.rig.blend(q, this.hop ? 30 : 10, dt); this.rig.tick(dt);
+    if (this.token) { this.token.play(this.hop ? 'Jump_Idle' : 'Idle'); this.token.tick(dt); } else { this.rig.blend(q, this.hop ? 30 : 10, dt); this.rig.tick(dt); }
     if (!this.hop) g.rotation.y += (Math.PI - g.rotation.y) * (1 - Math.exp(-dt * 4));
     if (this.shakeT > 0) { this.shakeT -= dt; g.position.x += (Math.random() - 0.5) * 0.08; }
     // rings pulse, labels bob

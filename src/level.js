@@ -7,6 +7,13 @@ import * as D from './decor.js';
 import * as F from './forest.js';
 import * as F2 from './forest2.js';
 import { hash } from './world.js';
+import * as M from './models.js';
+const pick = (list, seed) => list[Math.floor(hash(seed * 1.37 + 0.5) * list.length) % list.length];
+const PINES = ['tree_pineTallA', 'tree_pineTallB', 'tree_pineTallC', 'tree_pineTallD', 'tree_pineDefaultA', 'tree_pineRoundA', 'tree_pineRoundB'];
+const OAKS = ['tree_oak', 'tree_detailed', 'tree_fat', 'tree_default', 'tree_blocks_fall', 'tree_oak_dark'];
+const SHROOMS_BIG = ['mushroom_redTall', 'mushroom_tanTall', 'mushroom_redGroup'], SHROOMS = ['mushroom_red', 'mushroom_tan', 'mushroom_tanGroup', 'mushroom_redGroup'];
+const BUSHES = ['plant_bush', 'plant_bushDetailed', 'grass_leafsLarge', 'plant_flatTall', 'plant_bushLarge'];
+const ROCKS = ['rock_largeA', 'rock_largeB', 'rock_largeC', 'rock_largeD', 'rock_tallA', 'rock_tallB'];
 
 export function buildLevel(scene, phys) {
   const L = { spawn: new THREE.Vector3(0, 0, -3), shrines: [], gems: [], hearts: [], movers: [], swings: [], rotten: [], enemySpecs: [], banners: [], fires: [], mists: [], props: [], spores: [], critters: [], dapples: [], hazards: [], areas: [] };
@@ -15,23 +22,24 @@ export function buildLevel(scene, phys) {
   const prop = (name, x, y, z) => L.props.push({ name, x, y, z });
   const ground = (x, z, w, d, top, thick = 3, opts = {}) => { F.groundChunk(scene, { x, z, w, d, top, thick, seed: Math.abs(x * 7 + z * 13 + top), ...opts }); return boxTag(phys.add(Box.fromTop(x, z, w, d, top, thick)), 'ground'); };
   const rock = (x, z, w, d, top, thick = 1.6) => { D.island(scene, { x, z, w, d, top, thick, seed: x * 3 + z * 5, kind: 'moss', tufts: false }); return boxTag(phys.add(Box.fromTop(x, z, w, d, top, thick)), 'rock'); };
-  const stumpP = (x, z, r, top, seed = 1) => { F.outcrop(scene, null, x, z, top - 1.6, r * 2.3, seed + 7); boxTag(phys.add(Box.fromTop(x, z, r * 2.3, r * 2.3, top - 1.6, 3)), 'outcrop'); F.stump(scene, x, top, z, r, 1.6, seed); prop('stump', x, top - 1.6, z); return boxTag(phys.add(Box.fromTop(x, z, r * 1.7, r * 1.7, top, 1.6)), 'stump'); };
+  const stumpP = (x, z, r, top, seed = 1) => { F.outcrop(scene, null, x, z, top - 1.6, r * 2.3, seed + 7); boxTag(phys.add(Box.fromTop(x, z, r * 2.3, r * 2.3, top - 1.6, 3)), 'outcrop'); if (!M.prop(scene, 'stump_roundDetailed', x, top - 1.6, z, { rotY: hash(seed) * 6.28, height: 1.6, scale: 1 })) F.stump(scene, x, top, z, r, 1.6, seed); prop('stump', x, top - 1.6, z); return boxTag(phys.add(Box.fromTop(x, z, r * 1.7, r * 1.7, top, 1.6)), 'stump'); };
   const gem = (x, y, z) => L.gems.push(D.gem(scene, x, y, z));
   const heart = (x, y, z) => L.hearts.push(D.heart(scene, x, y, z));
   const shrine = (x, y, z, name) => { const s = D.shrine(scene, x, y, z); s.name = name; L.shrines.push(s); solid(x, z, 2.0, 2.0, y, 1.8, 'shrine'); prop('shrine', x, y, z); return s; };
   const goblin = (kind, x, y, z, extra = {}) => L.enemySpecs.push({ type: 'goblin', kind, x, y, z, ...extra });
-  const pine = (x, y, z, seed, scale = 1, col = true) => { F.pine(scene, x, y, z, seed, scale); prop('pine', x, y, z); if (col) solid(x, z, 0.8 * scale, 0.8 * scale, y, 7 * scale, 'trunk'); };
-  const oak = (x, y, z, seed, scale = 1, col = true) => { F.oak(scene, x, y, z, seed, scale); prop('oak', x, y, z); if (col) solid(x, z, 1.0 * scale, 1.0 * scale, y, 5 * scale, 'trunk'); };
+  const pine = (x, y, z, seed, scale = 1, col = true) => { if (!M.prop(scene, pick(PINES, seed), x, y, z, { rotY: hash(seed) * 6.28, height: 8.5 * scale })) F.pine(scene, x, y, z, seed, scale); prop('pine', x, y, z); if (col) solid(x, z, 0.8 * scale, 0.8 * scale, y, 7 * scale, 'trunk'); };
+  const oak = (x, y, z, seed, scale = 1, col = true) => { if (!M.prop(scene, pick(OAKS, seed), x, y, z, { rotY: hash(seed) * 6.28, height: 6.5 * scale })) F.oak(scene, x, y, z, seed, scale); prop('oak', x, y, z); if (col) solid(x, z, 1.0 * scale, 1.0 * scale, y, 5 * scale, 'trunk'); };
+  const rockP = (x, y, z, seed, h = 1.4) => { const r = M.prop(scene, pick(ROCKS, seed), x, y, z, { rotY: hash(seed * 3) * 6.28, height: h }); prop('rock', x, y, z); if (r) { const b = r.box; boxTag(phys.add(new Box(b.min.x, y, b.min.z, b.max.x, b.max.y, b.max.z)), 'rock'); } };
   const birch = (x, y, z, seed, scale = 1) => { F2.birch(scene, x, y, z, seed, scale); prop('birch', x, y, z); solid(x, z, 0.45 * scale, 0.45 * scale, y, 6 * scale, 'trunk'); };
   const snag = (x, y, z, seed, scale = 1) => { F2.snag(scene, x, y, z, seed, scale); prop('snag', x, y, z); solid(x, z, 0.8 * scale, 0.8 * scale, y, 5 * scale, 'trunk'); };
-  const shroom = (x, y, z, seed, big = false) => { D.mushroom(scene, x, y, z, seed, big); prop('mushroom', x, y, z); const s = big ? 1.6 + hash(seed) * 1.2 : 0.45 + hash(seed) * 0.4; solid(x, z, 0.4 * s, 0.4 * s, y, 1.1 * s, 'mushroom'); if (big) boxTag(phys.add(Box.fromTop(x, z, 0.9 * s, 0.9 * s, y + 1.35 * s, 0.4)), 'capTop'); };
-  const fernP = (x, y, z, seed, scale = 1) => { F.fern(scene, x, y, z, seed, scale); prop('fern', x, y, z); };
+  const shroom = (x, y, z, seed, big = false) => { const h = big ? 2.4 + hash(seed) * 1.2 : 0.8 + hash(seed) * 0.4; const r = M.prop(scene, pick(big ? SHROOMS_BIG : SHROOMS, seed), x, y, z, { rotY: hash(seed) * 6.28, height: h }); if (!r) D.mushroom(scene, x, y, z, seed, big); prop('mushroom', x, y, z); solid(x, z, h * 0.28, h * 0.28, y, h * 0.8, 'mushroom'); if (big) boxTag(phys.add(Box.fromTop(x, z, h * 0.55, h * 0.55, y + h * 0.95, 0.4)), 'capTop'); };
+  const fernP = (x, y, z, seed, scale = 1) => { if (!M.prop(scene, pick(BUSHES, seed), x, y, z, { rotY: hash(seed) * 6.28, height: 1.1 * scale })) F.fern(scene, x, y, z, seed, scale); prop('fern', x, y, z); };
   const crystal = (x, y, z, seed, mag = false) => { D.crystals(scene, x, y, z, seed, mag); prop('crystals', x, y, z); solid(x, z, 1.2, 1.2, y, 0.9, 'crystal'); };
   const lantern = (x, y, z, light = true) => { D.lantern(scene, x, y, z, light); prop('lantern', x, y, z); solid(x, z, 0.3, 0.3, y, 2.6, 'lantern'); };
   const sign = (x, y, z, text, rot) => { D.sign(scene, x, y, z, text, rot); prop('sign', x, y, z); solid(x, z, 0.3, 0.3, y, 1.6, 'sign'); };
   const menhir = (x, y, z, h, seed) => { F2.totem; F.menhir(scene, x, y, z, h, seed); prop('menhir', x, y, z); solid(x, z, 1.1, 0.7, y, h, 'menhir'); };
   const totem = (x, y, z, seed) => { F2.totem(scene, x, y, z, seed); prop('totem', x, y, z); solid(x, z, 0.9, 0.9, y, 4.4, 'totem'); };
-  const tent = (x, y, z, rot, seed) => { F.tent(scene, x, y, z, rot, seed); prop('tent', x, y, z); solid(x, z, 3.2, 3.2, y, 2.2, 'tent'); };
+  const tent = (x, y, z, rot, seed) => { if (!M.prop(scene, seed % 2 ? 'tent_detailedClosed' : 'tent_smallClosed', x, y, z, { rotY: rot, height: 2.6 })) F.tent(scene, x, y, z, rot, seed); prop('tent', x, y, z); solid(x, z, 3.2, 3.2, y, 2.2, 'tent'); };
   const fire = (x, y, z) => { L.fires.push(F.campfire(scene, x, y, z)); prop('campfire', x, y, z); L.hazards.push({ x, z, y, r: 1.0, dps: 0, touch: 5, kind: 'fire' }); };
   const outTree = (kind, x, top, z, seed, scale) => { F.outcrop(scene, null, x, z, top, 4 + hash(seed) * 2, seed); boxTag(phys.add(Box.fromTop(x, z, 4, 4, top, 3)), 'outcrop'); if (kind === 'oak') oak(x, top, z, seed, scale, false); else pine(x, top, z, seed, scale, false); };
   const canopy = (x, baseY, z, h, spread, seed) => { F2.canopyTree(scene, x, baseY, z, h, spread, seed); prop('canopyTree', x, baseY, z); };
@@ -57,6 +65,7 @@ export function buildLevel(scene, phys) {
   crystal(8, 0, 0, 1); lantern(-2.5, 0, -6.5); lantern(2.5, 0, -6.5, false);
   F.shaft(scene, -4, 0, -2); F.shaft(scene, 5, 0, 4, 16, 1.6);
   gem(-6, 0, 0); gem(6, 0, 3);
+  rockP(-7.5, 0, 9, 3, 1.6); rockP(9.5, 0, -3, 4, 1.2); rockP(-1, 0, -9.8, 5, 0.9);
   L.mists.push(F.mist(scene, 0, -7, 26, 60, 40, 3));
   canopy(-16, -34, -4, 50, 11, 1); canopy(17, -34, 2, 52, 11, 2);
   L.critters.push(F2.butterflies(scene, 2, 0, 2, 7, 6, 1)); L.critters.push(F2.deer(scene, -5, 0, 4, 2.4));
@@ -86,6 +95,7 @@ export function buildLevel(scene, phys) {
   shroom(-9, 6, 62, 9); crystal(9, 6, 68, 3); fernP(-10, 6, 54, 11); fernP(10, 6, 56, 12); fernP(-4, 6, 68, 13); F.shaft(scene, -6, 6, 58, 16, 1.4);
   goblin('knave', -5, 6, 56, { patrol: 4 }); goblin('skirmisher', 6, 6, 60, { patrol: 4 }); goblin('slinger', 0, 6, 65, { patrol: 3 }); goblin('knave', -6, 6, 65, { patrol: 3 });
   gem(-9, 6, 54); gem(9, 6, 54); gem(0, 6, 60); heart(-9, 6, 67);
+  rockP(-10.5, 6, 68.5, 6, 1.5); rockP(10.8, 6, 48.5, 7, 1.2);
   sign(4.5, 6, 69.2, 'GUARD (RMB) TURNS\nSTONES ASIDE', Math.PI);
   outTree('pine', -16.5, 4, 54, 41, 1.6); outTree('pine', 17, 4, 62, 42, 1.7); outTree('oak', -16.5, 5, 66, 43, 1.3); outTree('pine', 16.5, 5, 50, 44, 1.5);
   canopy(-17, -34, 58, 58, 12, 3); canopy(18, -34, 66, 56, 12, 4);
@@ -114,6 +124,7 @@ export function buildLevel(scene, phys) {
   fernP(-8, 6.5, 106, 57); fernP(10, 6.5, 116, 58); fernP(-10, 6.5, 124, 59); snag(-9.5, 6.5, 111, 60, 1.1); birch(9.5, 6.5, 118, 61, 1.1);
   goblin('skirmisher', -3, 6.5, 108, { patrol: 3 }); goblin('skirmisher', 6, 6.5, 114, { patrol: 3 }); goblin('brute', 0, 6.5, 120, { patrol: 2 });
   gem(-6, 6.5, 110); gem(5, 6.5, 117); gem(0, 6.5, 125);
+  rockP(-10.5, 6.5, 104, 8, 1.8); rockP(10.5, 6.5, 125, 9, 1.4); rockP(3, 6.5, 103.5, 10, 0.9);
   shrine(-7, 6.5, 124.5, 'The Hollow');
   lantern(3, 6.5, 125, true);
   // exit: a bounce cap launches you onto the high stump that leads to the roots
@@ -191,7 +202,7 @@ export function buildLevel(scene, phys) {
   F.skullPole(scene, -2.6, YY, 216.5); F.skullPole(scene, 2.6, YY, 216.5); solid(-2.6, 216.5, 0.3, 0.3, YY, 3, 'pole'); solid(2.6, 216.5, 0.3, 0.3, YY, 3, 'pole');
   L.banners.push(D.banner(scene, -6, YY, 217, 1, 0.5), D.banner(scene, 6, YY, 217, 1, -0.5));
   lantern(-4, YY, 218); lantern(4, YY, 218);
-  fernP(-11, YY, 231, 15); fernP(11, YY, 233, 16); shroom(-10, YY, 238, 17); crystal(10, YY, 239, 18, true);
+  fernP(-11, YY, 231, 15); fernP(11, YY, 233, 16); shroom(-10, YY, 238, 17); crystal(10, YY, 239, 18, true); rockP(-11, YY, 240, 19, 1.6); rockP(11.5, YY, 218.5, 20, 1.3);
   for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + 0.2; outTree('pine', Math.cos(a) * 19.5, YY - 2 + hash(i * 3) * 2, YZ + Math.sin(a) * 19.5, 70 + i, 1.6 + hash(i) * 0.5); }
   canopy(-20, -34, 222, 60, 13, 14); canopy(21, -34, 236, 62, 13, 15);
   const runeFloor = new THREE.Mesh(new THREE.RingGeometry(7.5, 8.2, 48), new THREE.MeshBasicMaterial({ color: 0xff8a4a, transparent: true, opacity: 0.3 })); runeFloor.rotation.x = -Math.PI / 2; runeFloor.position.set(YX, YY + 0.03, YZ); scene.add(runeFloor);

@@ -167,7 +167,7 @@
     <button class="m" id="btn-controls">Controls</button>
   </div>
   <div class="foot"><b>WASD</b> move · <b>SPACE</b> jump · <b>SHIFT</b> dash · <b>LMB</b> strike · <b>E</b> heavy · <b>RMB</b> guard · <b>CTRL</b> roll · gamepad supported</div>
-  <div class="ver">ERRANT · v0.5 · music: Joth, pauliuw (CC0)</div>
+  <div class="ver">ERRANT · v0.6 · models: KayKit, Quaternius, Kenney (CC0) · music: Joth, pauliuw (CC0)</div>
 </div>
 
 <div id="settings" class="screen" hidden>
@@ -244,7 +244,7 @@
     if (location.protocol === 'file:') fail('ES modules cannot load over file://. Run "node serve.mjs" and open http://localhost:5850.');
     window.addEventListener('error', function (e) { if (!window.ERRANT) fail(e.message + (e.filename ? '\n' + e.filename.split('/').pop() + ':' + e.lineno : '')); });
     window.addEventListener('unhandledrejection', function (e) { if (!window.ERRANT) fail(String(e.reason && e.reason.message || e.reason)); });
-    setTimeout(function () { if (!window.ERRANT) fail('Timed out after 10s waiting for the engine. Hard-refresh (Ctrl+Shift+R).'); }, 10000);
+    setTimeout(function () { if (!window.ERRANT) fail('Timed out after 25s waiting for the engine. Hard-refresh (Ctrl+Shift+R).'); }, 25000);
   })();
 </script>
 <script type="importmap">

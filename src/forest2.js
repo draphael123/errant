@@ -74,7 +74,7 @@ export function ropeBridge(scene, phys, a, b, width = 1.9, sag = 0.9) {
 // ---------- swinging log on chains from an overhead limb; the level moves its box each frame via `swing`
 export function swingLog(scene, phys, x, y, z, len = 3.6, drop = 7, amp = 0.55, period = 3.2) {
   const pivot = new THREE.Group(); pivot.position.set(x, y + drop, z);
-  const limb = m(new THREE.CylinderGeometry(0.5, 0.7, 14, 8), MAT.bark, 0, 0.6, 0); limb.rotation.z = Math.PI / 2; limb.rotation.y = 0.2; scene.add(freeze(limb.clone())); limb.position.set(x, y + drop + 0.6, z); scene.add(freeze(limb));
+  const limb = m(new THREE.CylinderGeometry(0.5, 0.7, 14, 8), MAT.bark, 0, 0.6, 0); limb.rotation.z = Math.PI / 2; limb.rotation.y = 0.2; limb.position.set(x, y + drop + 0.6, z); scene.add(freeze(limb));
   const chain = new THREE.MeshStandardMaterial({ color: 0x4a4a52, roughness: 0.6, metalness: 0.5 });
   for (const s of [-1, 1]) pivot.add(bone(V(s * len * 0.4, 0, 0), V(s * len * 0.4, -drop, 0), 0.06, 0.06, chain, 5));
   const log = m(new THREE.CylinderGeometry(0.5, 0.5, len, 10), MAT.bark, 0, -drop, 0); log.rotation.z = Math.PI / 2; pivot.add(log);

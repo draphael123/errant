@@ -7,6 +7,8 @@ import { buildGoblin, buildWarden, buildDummy, buildWarlord } from './rigs.js';
 import { diff } from './settings.js';
 import { turnToward } from './player.js';
 import { HealthBar } from './fx.js';
+import { CharacterModel, has as hasModel } from './models.js';
+const GOB_TINT = { knave: null, skirmisher: 0xd8ecb0, brute: 0x8a6a58, slinger: 0xe8dc98 };
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3();
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -88,7 +90,9 @@ export class Goblin extends Enemy {
   constructor(game, spec) {
     const kind = spec.kind || 'knave'; const K = GOB[kind];
     super(game, spec, { name: K.name, half: K.half, height: K.height, radius: K.radius, hp: K.hp, poise: K.poise });
-    this.kind = kind; this.K = K; this.rig = buildGoblin(kind); game.scene.add(this.rig.group); this.rig.group.position.copy(this.pos);
+    this.kind = kind; this.K = K;
+    this.usesModel = hasModel('goblin'); this.rig = this.usesModel ? new CharacterModel('goblin', { height: K.height * 1.02, tint: GOB_TINT[kind] }) : buildGoblin(kind);
+    game.scene.add(this.rig.group); this.rig.group.position.copy(this.pos);
     this.patrol = spec.patrol ?? 3; this.target = null; this.waitT = 1 + Math.random() * 2; this.walkPhase = 0; this.combo = 0; this.cool = 1 + Math.random();
     this.telegraph = K.atk ? game.fx.makeTelegraph(K.atk.range + 0.2, K.atk.arc) : game.fx.makeTelegraph(1.2, Math.PI * 2, 0xff5a2a);
     this.bar = new HealthBar(game.scene, 0.9 + K.radius * 0.6);
@@ -157,7 +161,19 @@ export class Goblin extends Enemy {
     spawnBolt(this.game, from, dir.multiplyScalar(R.speed).add(new THREE.Vector3(0, dist * 0.32, 0)), this, 'stone', R.dmg);
     this.game.sfx('bolt');
   }
+  animateModel(dt) {
+    const M = this.rig, st = this.state, K = this.K; const hs = Math.hypot(this.vel.x, this.vel.z);
+    if (st === 'dead') { M.play('Death', { loop: false, clamp: true }); return; }
+    if (st === 'attack') { const A = K.atk, t = this.t; const u = t < A.windup ? 0.5 * (t / A.windup) : t < A.windup + A.active ? 0.5 + 0.2 * ((t - A.windup) / A.active) : 0.7 + 0.3 * Math.min(1, (t - A.windup - A.active) / A.recovery); M.drive('Attack', u); return; }
+    if (st === 'aim') { M.drive('Attack', 0.45 * Math.min(1, this.t / K.ranged.windup)); return; }
+    if (st === 'hurt') { M.drive('HitRecieve', 1 - Math.max(0, this.stunT) / 0.22); return; }
+    if (st === 'stagger') { M.play('HitRecieve', { loop: true, speed: 0.5 }); return; }
+    if (hs > K.speed * 0.55) { M.play('Run', { speed: 0.7 + hs / K.speed * 0.6 }); return; }
+    if (hs > 0.4) { M.play('Walk', { speed: 0.8 + hs * 0.3 }); return; }
+    M.play('Idle');
+  }
   pose(dt) {
+    if (this.usesModel) return this.animateModel(dt);
     const q = {}, t = this.time, st = this.state, K = this.K; let rate = 14;
     const hs = Math.hypot(this.vel.x, this.vel.z); if (hs > 0.3) this.walkPhase += dt * (4 + hs * 2.0) * (this.kind === 'brute' ? 0.7 : 1);
     const f = clamp(hs / K.speed, 0, 1);

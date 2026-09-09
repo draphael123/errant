@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { makeBody } from './physics.js';
 import { buildKnight } from './rigs.js';
+import { CharacterModel, has as hasModel } from './models.js';
 import { S, diff } from './settings.js';
 
 export const MOVES = {
@@ -25,6 +26,8 @@ export class Player {
     this.scene = scene; this.phys = phys; this.fx = fx; this.sfx = sfx; this.hud = hud;
     this.body = makeBody(0, 0, 0, 0.36, 1.7);
     this.rig = buildKnight(); scene.add(this.rig.group);
+    this.model = hasModel('knight') ? new CharacterModel('knight', { height: 1.78 }) : null;
+    if (this.model) { scene.add(this.model.group); this.rig.group.visible = false; }
     this.pos = this.body.pos; this.vel = this.body.vel;
     this.hpMax = 100; this.hp = 100; this.stamina = STA.max; this.staDelay = 0;
     this.state = 'idle'; this.t = 0; this.yaw = 0; this.runPhase = 0; this.time = 0;
@@ -176,9 +179,8 @@ export class Player {
     else if (ground) this.runPhase = 0;
 
     this.lookAt = this.nearestEnemy(game, 10, -0.2);
-    this.rig.group.position.copy(this.pos); this.rig.group.rotation.y = this.yaw;
-    this.pose(dt, ground, input);
-    this.rig.tick(dt);
+    if (this.model) { this.model.group.position.copy(this.pos); this.model.group.rotation.y = this.yaw; this.animateModel(dt, ground); this.model.tick(dt); }
+    else { this.rig.group.position.copy(this.pos); this.rig.group.rotation.y = this.yaw; this.pose(dt, ground, input); this.rig.tick(dt); }
   }
 
   nearestEnemy(game, range, minDot) {
@@ -251,7 +253,23 @@ export class Player {
     }
   }
 
-  // ---- posing
+  // ---- skinned model: state → clip. Attacks are scrubbed by the frame data so timing stays authoritative.
+  animateModel(dt, ground) {
+    const M = this.model, st = this.state, a = this.attack;
+    if (st === 'dead') { M.play('Death_A', { loop: false, clamp: true }); return; }
+    if (a) { const clip = { light1: '1H_Melee_Attack_Slice_Horizontal', light2: '1H_Melee_Attack_Slice_Diagonal', light3: '1H_Melee_Attack_Chop', heavy: '2H_Melee_Attack_Chop', air: '1H_Melee_Attack_Slice_Horizontal' }[a.move.name] || '1H_Melee_Attack_Chop';
+      const u = a.phase === 'windup' ? 0.32 * a.u : a.phase === 'active' ? 0.32 + 0.26 * a.u : 0.58 + 0.42 * a.u; M.drive(clip, u); return; }
+    if (st === 'dash') { M.drive('Dodge_Forward', Math.min(0.95, this.dashT / PH.dashTime * 0.85)); return; }
+    if (st === 'roll') { M.drive('Dodge_Forward', this.rollT / PH.rollTime); return; }
+    if (st === 'hurt') { M.drive('Hit_A', 1 - Math.max(0, this.hurtT) / 0.38); return; }
+    if (st === 'stagger') { M.play('Hit_B', { loop: true, speed: 0.5 }); return; }
+    if (st === 'block') { M.play('Blocking'); return; }
+    if (!ground) { if (this.vel.y > 1.5) M.play('Jump_Start', { loop: false, clamp: true }); else M.play('Jump_Idle'); return; }
+    if (this.landT > 0.04 && st === 'idle') { M.play('Jump_Land', { loop: false, clamp: true }); return; }
+    if (st === 'run') { M.play('Running_A', { speed: 0.55 + this.speedFrac * 0.75 }); return; }
+    M.play('Idle');
+  }
+  // ---- posing (procedural fallback rig)
   pose(dt, ground, input) {
     const st = this.state, q = {}, t = this.time;
     let rate = 14;

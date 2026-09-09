@@ -19,6 +19,7 @@ import { spawnEnemies, updateProjectiles } from './enemies.js';
 import { Tutorial } from './tutorial.js';
 import { bakeStatics } from './bake.js';
 import { WorldMap } from './worldmap.js';
+import { preloadModels } from './models.js';
 
 const $ = id => document.getElementById(id);
 const KILL_Y_BELOW = 22;
@@ -63,6 +64,7 @@ const phys = new Physics();
 const fx = new FX(scene);
 const hud = new HUD();
 const input = new Input(renderer.domElement);
+{ const bootEl = $('boot'); bootEl.textContent = 'GATHERING THE WOOD…'; await preloadModels(f => { bootEl.textContent = 'GATHERING THE WOOD… ' + Math.round(f * 100) + '%'; }); }
 const level = buildLevel(scene, phys);
 const baked = bakeStatics(scene); console.log('ERRANT baked statics', baked);
 renderer.info.autoReset = false;

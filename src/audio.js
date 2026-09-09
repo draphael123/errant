@@ -126,7 +126,7 @@ export function sfx(name, opts = {}) {
 }
 
 // ---------------------------------------------------------------- music (buffer loops, never <audio> elements)
-const TRACKS = { title: 'audio/menu_theme.mp3', explore: 'audio/forest_theme.mp3' };
+const TRACKS = { title: 'audio/menu_theme.mp3', explore: 'audio/forest_theme2.mp3' };
 const music = { mode: null, kind: null, src: null, gain: null, token: 0, timer: 0, pad: null, padGain: null, step: 0, next: 0 };
 function fadeOutAndStop(src, g, sec = 0.8) {
   if (!src || !g) return; try { g.gain.cancelScheduledValues(ctx.currentTime); g.gain.setValueAtTime(g.gain.value, ctx.currentTime); g.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + sec); } catch { }

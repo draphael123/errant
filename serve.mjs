@@ -7,7 +7,7 @@ const ROOT = import.meta.dirname;
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json',
-  '.png': 'image/png', '.mp3': 'audio/mpeg', '.jpg': 'image/jpeg', '.webmanifest': 'application/manifest+json',
+  '.png': 'image/png', '.mp3': 'audio/mpeg', '.glb': 'model/gltf-binary', '.ogg': 'audio/ogg', '.jpg': 'image/jpeg', '.webmanifest': 'application/manifest+json',
 };
 
 http.createServer(async (req, res) => {

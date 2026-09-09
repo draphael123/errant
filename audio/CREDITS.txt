@@ -8,3 +8,9 @@ Sound effects (all CC0, see audio/manifest.json for the name → file map):
 - "Goblins Sound Pack" by artisticdude — https://opengameart.org/content/goblins-sound-pack (goblin voices)
 - "Impact Sounds" by Kenney — https://kenney.nl/assets/impact-sounds (impacts, footsteps)
 - forest_ambience.mp3 = "Forest Ambience" by TinyWorlds (CC0) https://opengameart.org/content/forest-ambience
+- forest_theme2.mp3 = "Treasure Hunter" by TAD (CC0) https://opengameart.org/content/treasure-hunter — the Goblin Wood level theme
+
+Models (all CC0):
+- models/knight.glb = KayKit Character Pack: Adventurers (Knight) by Kay Lousberg — https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
+- models/goblin.glb = "Goblin" by Quaternius via Poly Pizza — https://poly.pizza/m/OdCOFSmEhl
+- models/nature/*.glb = Kenney Nature Kit 2.1 — https://kenney.nl/assets/nature-kit
