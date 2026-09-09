@@ -235,7 +235,7 @@ export function updateCritters(L, dt, t, playerPos, phys) { for (const c of L.cr
 // Ground audit: every logged prop must sit on a collision top within 0.35 m, and every box should be tagged.
 export function auditLevel(L, phys) {
   const floating = [], untagged = [];
-  for (const p of L.props) { if (p.y < -30) continue; const fl = phys.floorAt(p.x, p.z, p.y + 0.2); const gap = fl ? p.y - fl.max.y : Infinity; if (gap > 0.35 || gap < -0.6) floating.push({ ...p, gap: fl ? +gap.toFixed(2) : null }); }
+  for (const p of L.props) { if (p.y < -30) continue; const fl = phys.floorAt(p.x, p.z, p.y - 0.4); const gap = fl ? p.y - fl.max.y : Infinity; if (gap > 0.35 || gap < -0.6) floating.push({ ...p, gap: fl ? +gap.toFixed(2) : null }); }
   for (const b of phys.boxes) if (!b.tag && b.kind !== 'wall' && b.kind !== 'mover') untagged.push({ min: b.min.toArray().map(n => +n.toFixed(1)), max: b.max.toArray().map(n => +n.toFixed(1)), kind: b.kind });
   return { props: L.props.length, boxes: phys.boxes.length, floating, untagged };
 }
