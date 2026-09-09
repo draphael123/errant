@@ -1,7 +1,7 @@
 // Keyboard + mouse + gamepad, polled per frame. Actions are named so the game never sees raw key codes.
 const BINDS = {
   fwd: ['KeyW', 'ArrowUp'], back: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
-  jump: ['Space', 'Pad0'], light: ['KeyJ', 'Mouse0', 'Pad2'], heavy: ['KeyE', 'KeyK', 'Pad3', 'Pad7'], block: ['KeyL', 'Mouse2', 'Pad4', 'Pad5', 'Pad6'], roll: ['ShiftLeft', 'ShiftRight', 'Pad1'],
+  jump: ['Space', 'Pad0'], light: ['KeyJ', 'Mouse0', 'Pad2'], heavy: ['KeyE', 'KeyK', 'Pad3', 'Pad7'], block: ['KeyL', 'Mouse2', 'Pad4', 'Pad5', 'Pad6'], dash: ['ShiftLeft', 'ShiftRight', 'Pad1'], roll: ['ControlLeft', 'ControlRight'],
   camL: ['BracketLeft'], camR: ['BracketRight'], pause: ['Escape', 'Pad9'], skip: ['KeyN', 'Pad8'],
 };
 

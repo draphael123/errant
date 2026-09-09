@@ -1,0 +1,117 @@
+{
+ "swing": [
+  "audio/sfx/swing_0.ogg",
+  "audio/sfx/swing_1.ogg",
+  "audio/sfx/swing_2.ogg"
+ ],
+ "unsheathe": [
+  "audio/sfx/unsheathe_0.ogg",
+  "audio/sfx/unsheathe_1.ogg"
+ ],
+ "hit": [
+  "audio/sfx/hit_0.ogg",
+  "audio/sfx/hit_1.ogg",
+  "audio/sfx/hit_2.ogg"
+ ],
+ "hitHeavy": [
+  "audio/sfx/hitHeavy_0.ogg",
+  "audio/sfx/hitHeavy_1.ogg",
+  "audio/sfx/hitHeavy_2.ogg"
+ ],
+ "clang": [
+  "audio/sfx/clang_0.ogg",
+  "audio/sfx/clang_1.ogg",
+  "audio/sfx/clang_2.ogg"
+ ],
+ "parry": [
+  "audio/sfx/parry_0.ogg",
+  "audio/sfx/parry_1.ogg"
+ ],
+ "enemyHit": [
+  "audio/sfx/enemyHit_0.ogg",
+  "audio/sfx/enemyHit_1.ogg",
+  "audio/sfx/enemyHit_2.ogg"
+ ],
+ "gobGrunt": [
+  "audio/sfx/gobGrunt_0.ogg",
+  "audio/sfx/gobGrunt_1.ogg",
+  "audio/sfx/gobGrunt_2.ogg"
+ ],
+ "gobHurt": [
+  "audio/sfx/gobHurt_0.ogg",
+  "audio/sfx/gobHurt_1.ogg",
+  "audio/sfx/gobHurt_2.ogg"
+ ],
+ "gobDie": [
+  "audio/sfx/gobDie_0.ogg",
+  "audio/sfx/gobDie_1.ogg"
+ ],
+ "gobChatter": [
+  "audio/sfx/gobChatter_0.ogg",
+  "audio/sfx/gobChatter_1.ogg",
+  "audio/sfx/gobChatter_2.ogg",
+  "audio/sfx/gobChatter_3.ogg",
+  "audio/sfx/gobChatter_4.ogg",
+  "audio/sfx/gobChatter_5.ogg",
+  "audio/sfx/gobChatter_6.ogg"
+ ],
+ "growl": [
+  "audio/sfx/growl_0.ogg",
+  "audio/sfx/growl_1.ogg",
+  "audio/sfx/growl_2.ogg"
+ ],
+ "roar": [
+  "audio/sfx/roar_0.ogg",
+  "audio/sfx/roar_1.ogg",
+  "audio/sfx/roar_2.ogg"
+ ],
+ "bossHurt": [
+  "audio/sfx/bossHurt_0.ogg",
+  "audio/sfx/bossHurt_1.ogg"
+ ],
+ "bolt": [
+  "audio/sfx/bolt_0.ogg"
+ ],
+ "stoneHit": [
+  "audio/sfx/stoneHit_0.ogg",
+  "audio/sfx/stoneHit_1.ogg"
+ ],
+ "step": [
+  "audio/sfx/step_0.ogg",
+  "audio/sfx/step_1.ogg",
+  "audio/sfx/step_2.ogg",
+  "audio/sfx/step_3.ogg",
+  "audio/sfx/step_4.ogg"
+ ],
+ "stepWood": [
+  "audio/sfx/stepWood_0.ogg",
+  "audio/sfx/stepWood_1.ogg",
+  "audio/sfx/stepWood_2.ogg"
+ ],
+ "land": [
+  "audio/sfx/land_0.ogg",
+  "audio/sfx/land_1.ogg"
+ ],
+ "slam": [
+  "audio/sfx/slam_0.ogg",
+  "audio/sfx/slam_1.ogg"
+ ],
+ "crumble": [
+  "audio/sfx/crumble_0.ogg",
+  "audio/sfx/crumble_1.ogg",
+  "audio/sfx/crumble_2.ogg"
+ ],
+ "stagger": [
+  "audio/sfx/stagger_0.ogg",
+  "audio/sfx/stagger_1.ogg"
+ ],
+ "ui": [
+  "audio/sfx/ui_0.ogg"
+ ],
+ "gem": [
+  "audio/sfx/gem_0.ogg"
+ ],
+ "hurt": [
+  "audio/sfx/hurt_0.ogg"
+ ]
+}

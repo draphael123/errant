@@ -2,3 +2,9 @@ Music (CC0 / public domain, from OpenGameArt.org):
 - menu_theme.mp3   = "Fantasy Orchestral Theme" by Joth   https://opengameart.org/content/fantasy-orchestral-theme
 - forest_theme.mp3 = "The Field Of Dreams" by pauliuw     https://opengameart.org/content/the-field-of-dreams
 Boss music and all sound effects are synthesised in src/audio.js.
+
+Sound effects (all CC0, see audio/manifest.json for the name → file map):
+- "RPG Sound Pack" by artisticdude — https://opengameart.org/content/rpg-sound-pack (swings, unsheathe, ogre, giant, interface)
+- "Goblins Sound Pack" by artisticdude — https://opengameart.org/content/goblins-sound-pack (goblin voices)
+- "Impact Sounds" by Kenney — https://kenney.nl/assets/impact-sounds (impacts, footsteps)
+- forest_ambience.mp3 = "Forest Ambience" by TinyWorlds (CC0) https://opengameart.org/content/forest-ambience

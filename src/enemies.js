@@ -3,7 +3,7 @@
 // Damage is in health points out of 100.
 import * as THREE from 'three';
 import { makeBody } from './physics.js';
-import { buildGoblin, buildWarden, buildDummy } from './rigs.js';
+import { buildGoblin, buildWarden, buildDummy, buildWarlord } from './rigs.js';
 import { diff } from './settings.js';
 import { turnToward } from './player.js';
 import { HealthBar } from './fx.js';
@@ -33,7 +33,7 @@ class Enemy {
     _w.subVectors(this.pos, info.from); _w.y = 0; _w.normalize();
     const kb = info.knock * (this.isBoss ? 0.12 : 0.95);
     if (!this.hyper || this.state === 'stagger') { this.vel.x += _w.x * kb; this.vel.z += _w.z * kb; }
-    this.game.sfx('enemyHit');
+    this.game.sfx('enemyHit'); if (this.voiceHurt) this.game.sfx(this.voiceHurt);
     if (this.hp <= 0) { this.die(); return 'kill'; }
     if (this.poise >= this.poiseMax) { this.poise = 0; this.stagger(); return 'stagger'; }
     if (!this.hyper && this.state !== 'stagger' && !this.isBoss) { this.state = 'hurt'; this.t = 0; this.stunT = 0.22; this.telegraph?.hide(); }
@@ -54,6 +54,8 @@ class Enemy {
   // Move along a direction at speed, refusing to step off ledges deeper than 1.5 m.
   walkDir(dx, dz, speed, dt, face = true) {
     const l = Math.hypot(dx, dz); if (l < 0.001) return false; dx /= l; dz /= l;
+    // blocked by a solid last frame: slide along it rather than push into it
+    if (this.body.hitWall) { this.slideT = (this.slideT || 0) + dt; if (this.slideT > 0.7) { this.slideSign = -(this.slideSign || 1); this.slideT = 0; } const a = (this.slideSign || 1) * 1.15, c = Math.cos(a), s = Math.sin(a); const nx = dx * c - dz * s, nz = dx * s + dz * c; dx = nx; dz = nz; } else this.slideT = 0;
     const nx = this.pos.x + dx * (this.radius + 0.4), nz = this.pos.z + dz * (this.radius + 0.4);
     const fl = this.game.phys.floorAt(nx, nz, this.pos.y + 0.5);
     if (!fl || this.pos.y - fl.max.y > 1.5) { this.vel.x *= 0.5; this.vel.z *= 0.5; return false; }
@@ -90,6 +92,7 @@ export class Goblin extends Enemy {
     this.patrol = spec.patrol ?? 3; this.target = null; this.waitT = 1 + Math.random() * 2; this.walkPhase = 0; this.combo = 0; this.cool = 1 + Math.random();
     this.telegraph = K.atk ? game.fx.makeTelegraph(K.atk.range + 0.2, K.atk.arc) : game.fx.makeTelegraph(1.2, Math.PI * 2, 0xff5a2a);
     this.bar = new HealthBar(game.scene, 0.9 + K.radius * 0.6);
+    this.voiceHurt = kind === 'brute' ? 'growl' : 'gobHurt'; this.chatT = 3 + Math.random() * 6; this.isAdd = !!spec.add;
   }
   get hyper() { return this.K.hyperAlways || this.state === 'attack'; }
   update(dt) {
@@ -97,6 +100,7 @@ export class Goblin extends Enemy {
     const p = this.player, d = this.distToPlayer(), dy = p.pos.y - this.pos.y, K = this.K;
     const sees = p.alive && d < K.see && Math.abs(dy) < (K.ranged ? 8 : 3.2);
     const st = this.state;
+    if (this.alive && d < 14) { this.chatT -= dt; if (this.chatT <= 0) { this.game.sfx(st === 'chase' || st === 'attack' ? 'gobGrunt' : 'gobChatter'); this.chatT = 5 + Math.random() * 7; } }
     if (st === 'dead') { this.deadT += dt; this.vel.x = 0; this.vel.z = 0; }
     else if (st === 'hurt' || st === 'stagger') { this.stunT -= dt; if (this.stunT <= 0) { this.state = 'idle'; this.combo = 0; } }
     else if (st === 'attack') this.updateMelee(dt);
@@ -108,11 +112,11 @@ export class Goblin extends Enemy {
       const R = K.ranged; this.cool -= dt;
       if (d < R.near) { this.state = 'retreat'; const ok = this.walkDir(this.pos.x - p.pos.x, this.pos.z - p.pos.z, K.speed, dt, false); this.yaw = turnToward(this.yaw, this.yawToPlayer(), dt * 6); if (!ok && this.cool <= 0) { this.state = 'aim'; this.t = 0; } }
       else if (d > R.far) { this.state = 'chase'; this.walkToward(p.pos.x, p.pos.z, K.speed, dt); }
-      else { this.state = 'chase'; this.vel.x *= 0.8; this.vel.z *= 0.8; this.yaw = turnToward(this.yaw, this.yawToPlayer(), dt * 6); if (this.cool <= 0) { this.state = 'aim'; this.t = 0; this.game.sfx('growl'); } }
+      else { this.state = 'chase'; this.vel.x *= 0.8; this.vel.z *= 0.8; this.yaw = turnToward(this.yaw, this.yawToPlayer(), dt * 6); if (this.cool <= 0) { this.state = 'aim'; this.t = 0; this.game.sfx('gobGrunt'); } }
     }
     else if (sees) {
       const A = K.atk;
-      if (d < A.range - 0.2 && this.waitT <= 0) { this.state = 'attack'; this.t = 0; this.hitDone = false; this.game.sfx('growl'); }
+      if (d < A.range - 0.2 && this.waitT <= 0) { this.state = 'attack'; this.t = 0; this.hitDone = false; this.game.sfx(this.kind === 'brute' ? 'growl' : 'gobGrunt'); }
       else { this.waitT -= dt; this.state = 'chase'; if (d > 1.3) this.walkToward(p.pos.x, p.pos.z, K.speed, dt); else { this.vel.x *= 0.7; this.vel.z *= 0.7; this.yaw = turnToward(this.yaw, this.yawToPlayer(), dt * 8); } }
     }
     else {
@@ -202,7 +206,7 @@ export function updateProjectiles(game, dt) {
       _w.subVectors(p.pos, b.pos); _w.y += 1.0;
       if (p.alive && _w.length() < 0.8) {
         const res = p.takeDamage(b.dmg, b.owner.pos, { knock: 4 });
-        if (res === 'blocked' || res === 'parried') game.fx.burst(b.pos, 0xffd27a, 10, 5); else game.fx.burst(b.pos, b.kind === 'stone' ? 0xb0a898 : 0xff6a3a, 10, 4);
+        if (res === 'blocked' || res === 'parried') game.fx.burst(b.pos, 0xffd27a, 10, 5); else { game.fx.burst(b.pos, b.kind === 'stone' ? 0xb0a898 : 0xff6a3a, 10, 4); if (b.kind === 'stone') game.sfx('stoneHit'); }
         gone = true;
       } else { const fl = game.phys.floorAt(b.pos.x, b.pos.z, b.pos.y); if (fl && b.pos.y <= fl.max.y) { game.fx.burst(b.pos, b.kind === 'stone' ? 0xb0a898 : 0xff6a3a, 8, 3, { flat: true }); gone = true; } }
     }
@@ -310,6 +314,111 @@ export class Warden extends Enemy {
   }
 }
 
+// ---------------------------------------------------------------- THE GOBLIN WARLORD (boss)
+const WL = {
+  slam: { windup: 0.95, active: 0.6, recovery: 1.0, ringR: 7.5, dmg: 22, knock: 11 },
+  sweep: { windup: 0.7, active: 0.2, recovery: 0.9, range: 4.2, arc: 2.6, dmg: 18, knock: 10 },
+  charge: { windup: 0.6, active: 0.6, recovery: 0.9, speed: 15, dmg: 24, knock: 12 },
+  horn: { windup: 1.3, active: 0.1, recovery: 0.8 },
+  barrage: { windup: 0.6, active: 1.0, recovery: 0.9, dmg: 10, shots: 3 },
+};
+export class Warlord extends Enemy {
+  constructor(game, spec) {
+    super(game, spec, { name: 'The Goblin Warlord', half: 0.8, height: 3.2, radius: 1.15, hp: 40, poise: 9 });
+    this.isBoss = true; this.rig = buildWarlord(); game.scene.add(this.rig.group); this.rig.group.position.copy(this.pos);
+    this.state = 'dormant'; this.yaw = Math.PI; this.phase = 1; this.atk = null; this.combo = 0; this.thinkT = 0; this.hornCool = 6; this.shots = 0; this.voiceHurt = 'bossHurt'; this.walkPhase = 0;
+    this.tele = { sweep: game.fx.makeTelegraph(4.4, 2.6), slam: game.fx.makeTelegraph(7.5, Math.PI * 2), charge: game.fx.makeTelegraph(13, 0.55), barrage: game.fx.makeTelegraph(1.6, Math.PI * 2, 0xff8a2a) };
+    this.telegraph = { hide: () => { for (const k in this.tele) this.tele[k].hide(); } };
+    this.ring = null; this.chargeDir = new THREE.Vector3();
+  }
+  get hyper() { return this.state === 'attack' || this.state === 'rise'; }
+  get poiseFrac() { return this.poise / this.poiseMax; }
+  wake() { if (this.state === 'dormant') { this.state = 'rise'; this.t = 0; this.game.sfx('roar'); this.game.fx.shake(0.6); } }
+  reset(spec) { this.pos.set(spec.x, spec.y, spec.z); this.vel.set(0, 0, 0); this.hp = this.hpMax; this.poise = 0; this.state = 'dormant'; this.phase = 1; this.telegraph.hide(); this.yaw = Math.PI; this.hornCool = 6; this.alive = true; this.deadT = 0; this.rig.group.visible = true; }
+  update(dt) { this.common(dt); this.think(dt); this.physics(dt); this.pose(dt); if (this.deadT > 3.5) this.rig.group.visible = false; }
+  adds() { return this.game.enemies.filter(e => e.isAdd && e.alive).length; }
+  think(dt) {
+    const p = this.player, d = this.distToPlayer(); const st = this.state; const spd = this.phase === 2 ? 0.75 : 1;
+    if (st === 'dormant') return;
+    if (st === 'rise') { if (this.t > 1.7) { this.state = 'idle'; this.thinkT = 0.6; } return; }
+    if (st === 'dead') { this.deadT += dt; return; }
+    if (st === 'stagger') { this.stunT -= dt; if (this.stunT <= 0) { this.state = 'idle'; this.thinkT = 0.3; } return; }
+    if (st === 'attack') { this.updateAttack(dt, spd); return; }
+    if (this.hp <= this.hpMax * 0.5 && this.phase === 1) { this.phase = 2; this.game.sfx('roar'); this.game.fx.shake(0.5); this.game.hud.toast('THE WARLORD RAGES', 1.6); this.game.onBossRage && this.game.onBossRage(this); this.thinkT = 0.8; this.state = 'rise'; this.t = 0.6; return; }
+    this.thinkT -= dt; this.hornCool -= dt;
+    if (!p.alive) { this.vel.x *= 0.8; this.vel.z *= 0.8; return; }
+    if (this.thinkT <= 0) {
+      const r = Math.random();
+      if (this.hornCool <= 0 && this.adds() < 2 && d > 3) this.begin('horn');
+      else if (d < 4.5) this.begin(r < 0.55 ? 'sweep' : 'slam');
+      else if (d < 10) { if (r < 0.35) this.begin('charge'); else if (r < 0.65) this.begin('barrage'); else if (r < 0.8) this.begin('slam'); else { this.walkToward(p.pos.x, p.pos.z, 3.4, dt); this.thinkT = 0.25; } }
+      else this.begin(r < 0.5 ? 'charge' : 'barrage');
+    } else { if (d > 3.4) this.walkToward(p.pos.x, p.pos.z, 3.4, dt); else { this.vel.x *= 0.8; this.vel.z *= 0.8; this.yaw = turnToward(this.yaw, this.yawToPlayer(), dt * 5); } }
+  }
+  begin(kind) { this.state = 'attack'; this.atk = kind; this.t = 0; this.hitDone = false; this.ring = null; this.shots = 0; if (kind === 'charge' || kind === 'sweep') this.game.sfx('growl'); if (kind === 'horn') this.hornCool = 16; }
+  updateAttack(dt, spd) {
+    const k = this.atk, A = WL[k], p = this.player, t = this.t; const wind = A.windup * spd, rec = A.recovery * (this.phase === 2 ? 0.78 : 1);
+    if (t < wind) {
+      const u = t / wind;
+      if (k === 'charge') { if (u < 0.6) this.yaw = turnToward(this.yaw, this.yawToPlayer(), dt * 5); this.tele.charge.show(this.pos, this.yaw, u); }
+      else if (k === 'sweep') { this.yaw = turnToward(this.yaw, this.yawToPlayer(), dt * 3.5); this.tele.sweep.show(this.pos, this.yaw, u); }
+      else if (k === 'slam') { this.tele.slam.show(this.pos, this.yaw, u); this.yaw = turnToward(this.yaw, this.yawToPlayer(), dt * 2); }
+      else if (k === 'barrage') { this.yaw = turnToward(this.yaw, this.yawToPlayer(), dt * 4); this.tele.barrage.show(this.pos, this.yaw, u); }
+      this.vel.x *= 0.85; this.vel.z *= 0.85;
+    }
+    else if (t < wind + A.active) {
+      const u = (t - wind) / A.active;
+      if (!this.hitDone) { this.hitDone = true; this.telegraph.hide();
+        if (k === 'sweep') { this.game.sfx('swing', { heavy: true }); const f = this.forward(_v); this.game.fx.slash(this.pos.clone().add(new THREE.Vector3(f.x * 0.5, 1.5, f.z * 0.5)), this.yaw, 1.0, A.range, A.arc, 0xff6a3a, 0.22, 0.25); this.vel.x = f.x * 3; this.vel.z = f.z * 3; if (this.playerInArc(A.range, A.arc)) p.takeDamage(A.dmg, this.pos, { knock: A.knock, heavy: true }); }
+        else if (k === 'slam') { this.game.sfx('slam'); this.game.fx.shake(0.9); this.game.fx.burst(this.pos.clone(), 0xffa060, 40, 9, { flat: true, up: 3 }); this.ring = this.game.fx.ring(this.pos.clone(), 0xff7a3a, 1.2, A.ringR, A.active, 0.35); this.ring.hitDone = false; }
+        else if (k === 'charge') { this.forward(this.chargeDir); this.game.sfx('roar'); }
+        else if (k === 'horn') { this.game.sfx('horn'); this.game.hud.toast('THE WARLORD CALLS', 1.4); this.game.summon && this.game.summon(2); }
+      }
+      if (k === 'barrage') { const due = Math.floor(u * A.shots + 0.001); if (this.shots < due && this.shots < A.shots) { this.shots++; this.throwStone(A.dmg); } }
+      if (k === 'slam' && this.ring && !this.ring.hitDone) { const d = this.distToPlayer(); const grounded = p.pos.y - this.pos.y < 0.9; if (grounded && Math.abs(d - this.ring.radius) < 1.0 && d > 1.0) { this.ring.hitDone = true; p.takeDamage(A.dmg, this.pos, { knock: A.knock, heavy: true, parryable: false }); } }
+      if (k === 'charge') {
+        const s = A.speed * (u < 0.85 ? 1 : 0.3); this.vel.x = this.chargeDir.x * s; this.vel.z = this.chargeDir.z * s;
+        if (u > 0.05 && this.time % 0.08 < dt) this.game.fx.burst(this.pos.clone(), 0xd8c8a8, 4, 2, { flat: true, up: 1, gravity: 10, life: 0.3 });
+        const d = this.distToPlayer(); if (d < this.radius + p.radius + 0.4 && Math.abs(p.pos.y - this.pos.y) < 2.5) { this.t = wind + A.active; p.takeDamage(A.dmg, this.pos, { knock: A.knock, heavy: true }); this.game.fx.shake(0.5); this.vel.x *= 0.2; this.vel.z *= 0.2; }
+        if (this.body.hitWall) { this.t = wind + A.active; this.game.fx.shake(0.6); this.game.sfx('slam'); this.game.fx.burst(this.pos.clone().add(new THREE.Vector3(0, 1.5, 0)), 0xd0c0a0, 20, 6); this.poise += 4; this.poiseDelay = 1.5; if (this.poise >= this.poiseMax) { this.poise = 0; this.stagger(); return; } }
+      }
+    }
+    else if (t < wind + A.active + rec) { this.vel.x *= 0.85; this.vel.z *= 0.85; }
+    else { if (this.phase === 2 && k === 'sweep' && this.combo === 0 && this.distToPlayer() < 5.5) { this.combo = 1; this.begin('sweep'); return; } this.combo = 0; this.state = 'idle'; this.thinkT = 0.35 + Math.random() * 0.5; }
+  }
+  throwStone(dmg) {
+    const from = this.pos.clone().add(new THREE.Vector3(Math.sin(this.yaw) * 0.8, 2.4, Math.cos(this.yaw) * 0.8));
+    const to = this.player.pos.clone().add(new THREE.Vector3(this.player.vel.x * 0.3 + (Math.random() - 0.5) * 2, 1.0, this.player.vel.z * 0.3 + (Math.random() - 0.5) * 2));
+    const dir = to.sub(from); const dist = dir.length(); dir.divideScalar(dist);
+    spawnBolt(this.game, from, dir.multiplyScalar(16).add(new THREE.Vector3(0, dist * 0.3, 0)), this, 'stone', dmg); this.game.sfx('bolt');
+  }
+  pose(dt) {
+    const q = {}, st = this.state, t = this.time; let rate = 12;
+    q.browL = 0.5; q.browR = 0.5; q.browY = 0; q.mouthOpen = st === 'attack' ? 0.7 : 0.15; q.mouthW = 0.85; q.eyeOpen = st === 'attack' && this.t < WL[this.atk].windup ? 1.4 : 1; q.footR = 0; q.footL = 0; q.headZ = 0; q.roll = 0; q.headY = 0; q.yaw = 0; q.bodyY = 0; q.lean = 0.15; q.headX = 0;
+    q.armR = { x: 0.4, y: 0, z: 0.5 }; q.armL = { x: 0.1, y: 0, z: -0.5 }; q.hipR = 0; q.hipL = 0;
+    if (st === 'dormant') { q.lean = 0.5; q.bodyY = -0.22; q.hipR = -1.3; q.hipL = -1.3; q.headX = 0.55; q.armR = { x: -0.6, y: 0, z: 0.4 }; q.armL = { x: -0.5, y: 0, z: -0.4 }; q.eyeOpen = 0.3; q.mouthOpen = 0; rate = Infinity; }
+    else if (st === 'rise') { const u = clamp(this.t / 1.2, 0, 1), e = ease(u), s = Math.sin(u * Math.PI); q.lean = 0.5 * (1 - e) - 0.3 * s; q.bodyY = -0.22 * (1 - e); q.hipR = -1.3 * (1 - e); q.hipL = -1.3 * (1 - e); q.headX = 0.55 * (1 - e) - 0.5 * s; q.armR = { x: 1.8 * s + 0.3, y: 0, z: 1.0 * s + 0.4 }; q.armL = { x: 1.6 * s, y: 0, z: -1.0 * s - 0.4 }; q.mouthOpen = 0.9 * s; rate = 10; }
+    else if (st === 'attack') {
+      const k = this.atk, A = WL[k], tt = this.t, spd = this.phase === 2 ? 0.75 : 1, wind = A.windup * spd;
+      const wr = tt < wind ? ease(tt / wind) : 1, act = tt >= wind ? clamp((tt - wind) / A.active, 0, 1) : 0, rec = tt >= wind + A.active ? ease(clamp((tt - wind - A.active) / (A.recovery * (this.phase === 2 ? 0.78 : 1)), 0, 1)) : 0;
+      if (k === 'sweep') { const wx = -1.4, wz = 1.6, sx = -1.6, sz = -1.0; const kk = Math.min(1, act * 1.4); q.armR = rec ? { x: sx * (1 - rec), y: 0, z: sz * (1 - rec) + 0.5 * rec } : act ? { x: wx + (sx - wx) * kk, y: 0, z: wz + (sz - wz) * kk } : { x: 0.4 + (wx - 0.4) * wr, y: 0, z: 0.5 + (wz - 0.5) * wr }; q.yaw = rec ? -0.7 * (1 - rec) : act ? 0.7 - 1.4 * kk : 0.7 * wr; q.lean = 0.2 + 0.25 * act; rate = act && !rec ? Infinity : 14; }
+      else if (k === 'slam') { if (!act && !rec) { q.armR = { x: 2.7 * wr, y: 0, z: 0.4 }; q.armL = { x: 2.3 * wr, y: 0, z: -0.5 }; q.lean = -0.3 * wr; q.bodyY = 0.25 * wr; q.hipR = -0.4 * wr; q.hipL = -0.4 * wr; q.headX = -0.4 * wr; } else { const ee = rec ? 1 - rec : 1; q.armR = { x: -1.4 * ee, y: 0, z: 0.3 }; q.armL = { x: -1.1 * ee, y: 0, z: -0.4 }; q.lean = 0.6 * ee; q.bodyY = -0.3 * ee; q.hipR = -0.9 * ee; q.hipL = 0.3 * ee; q.headX = 0.4 * ee; rate = act && !rec ? Infinity : 8; } }
+      else if (k === 'charge') { if (act && !rec) { const ph = t * 16, s = Math.sin(ph); q.lean = 0.55; q.hipR = s * 1.0; q.hipL = -s * 1.0; q.footR = Math.max(0, s) * 0.5; q.footL = Math.max(0, -s) * 0.5; q.armR = { x: -1.2, y: 0, z: 0.9 }; q.armL = { x: -0.8, y: 0, z: -0.9 }; rate = 30; } else { q.lean = 0.35 * (rec ? 1 - rec : wr); q.armR = { x: 0.9 * wr, y: 0, z: 0.5 }; q.armL = { x: 0.8 * wr, y: 0, z: -0.6 }; q.headX = -0.2 * wr; } }
+      else if (k === 'horn') { q.armL = { x: -2.6 * wr, y: 0, z: -0.3 }; q.headX = -0.5 * wr; q.lean = -0.15 * wr; q.mouthOpen = 0.9 * wr; q.armR = { x: 0.3, y: 0, z: 0.9 }; rate = 14; }
+      else if (k === 'barrage') { const ph = act ? act * A.shots * Math.PI * 2 : 0; q.armR = { x: act ? -1.4 + Math.sin(ph) * 1.0 : -0.3 - wr * 0.8, y: 0, z: 0.7 }; q.armL = { x: -0.4, y: 0, z: -0.5 }; q.lean = 0.2; q.yaw = act ? Math.sin(ph) * 0.3 : 0; rate = 20; }
+    }
+    else if (st === 'stagger') { const w = Math.sin(t * 12) * 0.14; q.lean = -0.35; q.yaw = w; q.headZ = w * 1.2; q.armR = { x: -0.6, y: 0, z: 1.4 }; q.armL = { x: -0.5, y: 0, z: -1.4 }; q.headX = -0.5; q.bodyY = -0.12; q.hipR = -0.4; q.hipL = 0.3; q.eyeOpen = 0.5; q.mouthOpen = 0.6; q.browL = -0.3; q.browR = 0.3; rate = 16; }
+    else if (st === 'dead') { const u = clamp(this.deadT / 1.4, 0, 1), e = ease(u); q.lean = -1.4 * e; q.bodyY = -0.3 * e - Math.max(0, this.deadT - 2.2) * 0.8; q.headX = -0.6 * e; q.armR = { x: -0.8 * e, y: 0, z: 1.4 * e }; q.armL = { x: -0.8 * e, y: 0, z: -1.4 * e }; q.hipR = 0.5 * e; q.hipL = -0.3 * e; q.eyeOpen = 0.05; q.mouthOpen = 0.5; rate = Infinity; }
+    else {
+      const hs = Math.hypot(this.vel.x, this.vel.z); const f = clamp(hs / 3.4, 0, 1); this.walkPhase += dt * (2.5 + hs * 1.1); const ph = this.walkPhase, s = Math.sin(ph);
+      q.hipR = s * 0.75 * f; q.hipL = -s * 0.75 * f; q.footR = Math.max(0, s) * 0.5 * f; q.footL = Math.max(0, -s) * 0.5 * f;
+      q.armR = { x: 0.5 - s * 0.3 * f, y: 0, z: 0.5 }; q.armL = { x: s * 0.4 * f, y: 0, z: -0.5 }; q.lean = 0.18 + 0.12 * f; q.bodyY = Math.abs(s) * 0.05 * f + Math.sin(t * 1.5) * 0.012; q.headX = Math.sin(t * 0.8) * 0.06; q.headY = Math.sin(t * 0.6) * 0.15; rate = 12;
+      if (this.phase === 2 && this.hp < this.hpMax * 0.2) { q.browY = 0.02; q.browL = -0.3; q.browR = -0.3; q.eyeOpen = 1.2; q.mouthOpen = 0.5; } // panic at low health
+    }
+    this.rig.blend(q, rate, dt);
+  }
+}
+
 // ---------------------------------------------------------------- TRAINING DUMMY (tutorial only; never dies)
 export class Dummy extends Enemy {
   constructor(game, spec) {
@@ -335,8 +444,8 @@ export class Dummy extends Enemy {
       if (t < a.windup) this.telegraph.show(this.pos, this.yaw, t / a.windup);
       else if (t < a.windup + a.active) {
         if (!this.hitDone) { this.hitDone = true; this.telegraph.hide(); this.game.sfx('swing'); const f = this.forward(_v); this.game.fx.slash(this.pos.clone().add(new THREE.Vector3(f.x * 0.3, 1.2, f.z * 0.3)), this.yaw, 0.5, a.range, a.arc, 0xff6a3a, 0.18, 0.3);
-          if (this.playerInArc(a.range, a.arc)) { const rolling = p.state === 'roll'; const res = p.takeDamage(8, this.pos, { knock: 4 }); if (res === 'blocked') this.results.blocked++; else if (res === 'parried') { this.results.parried++; this.state = 'stagger'; this.t = 0; this.stunT = 1.4; } else if (res === 'immune' && rolling) this.results.dodged++; else if (res === 'hit') this.results.hit++; }
-          else if (p.state === 'roll' && d < a.range + 1.2) this.results.dodged++; }
+          if (this.playerInArc(a.range, a.arc)) { const rolling = p.state === 'roll' || p.state === 'dash'; const res = p.takeDamage(8, this.pos, { knock: 4 }); if (res === 'blocked') this.results.blocked++; else if (res === 'parried') { this.results.parried++; this.state = 'stagger'; this.t = 0; this.stunT = 1.4; } else if (res === 'immune' && rolling) this.results.dodged++; else if (res === 'hit') this.results.hit++; }
+          else if ((p.state === 'roll' || p.state === 'dash') && d < a.range + 1.2) this.results.dodged++; }
       }
       else if (t > a.windup + a.active + a.recovery) { this.state = 'idle'; this.swingT = 1.6; }
     }
@@ -361,6 +470,7 @@ export function spawnEnemies(game, specs) {
   for (const s of specs) {
     if (s.type === 'goblin' || s.type === 'knave') out.push(new Goblin(game, { kind: 'knave', ...s }));
     else if (s.type === 'warden') out.push(new Warden(game, s));
+    else if (s.type === 'warlord') out.push(new Warlord(game, s));
     else if (s.type === 'dummy') out.push(new Dummy(game, s));
   }
   return out;

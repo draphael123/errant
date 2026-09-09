@@ -12,8 +12,8 @@ export const MOVES = {
   air: { windup: 0.07, active: 0.15, recovery: 0.2, dmg: 1, poise: 1, lunge: 0, arc: 2.6, range: 2.5, knock: 3, next: null, chainAt: 1, cost: 10, air: true },
 };
 for (const k in MOVES) MOVES[k].name = k;
-const PH = { gravity: 30, run: 8.6, accel: 84, airAccel: 32, decel: 78, jump: 11.8, djump: 10.8, coyote: 0.12, buffer: 0.14, maxFall: 34, rollSpeed: 10.8, rollTime: 0.5, blockSpeed: 0.42 };
-const STA = { max: 100, regen: 30, delay: 0.5, roll: 20, blockHit: 22 };
+const PH = { gravity: 30, run: 8.6, accel: 84, airAccel: 32, decel: 78, jump: 11.8, djump: 10.8, dashSpeed: 18, dashTime: 0.22, dashCool: 0.9, coyote: 0.12, buffer: 0.14, maxFall: 34, rollSpeed: 10.8, rollTime: 0.5, blockSpeed: 0.42 };
+const STA = { max: 100, regen: 30, delay: 0.5, roll: 20, dash: 15, blockHit: 22 };
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3();
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -29,10 +29,10 @@ export class Player {
     this.hpMax = 100; this.hp = 100; this.stamina = STA.max; this.staDelay = 0;
     this.state = 'idle'; this.t = 0; this.yaw = 0; this.runPhase = 0; this.time = 0;
     this.attack = null; this.iframes = 0; this.canDouble = true; this.airAttackUsed = false; this.coyote = 0; this.jumpBuf = 0; this.wasGround = false;
-    this.blockT = 0; this.rollDir = new THREE.Vector3(0, 0, 1); this.rollT = 0; this.stunT = 0; this.hurtT = 0; this.landT = 0; this.landHard = false;
+    this.blockT = 0; this.rollDir = new THREE.Vector3(0, 0, 1); this.rollT = 0; this.dashDir = new THREE.Vector3(0, 0, 1); this.dashT = 0; this.dashCool = 0; this.airDashUsed = false; this.stunT = 0; this.hurtT = 0; this.landT = 0; this.landHard = false;
     this.jumpT = 99; this.flipT = 99; this.airT = 0; this.emoteKind = null; this.emoteT = 0; this.lookAt = null;
     this.deadT = 0; this.god = false; this.lastGround = new THREE.Vector3(); this.speedFrac = 0; this.wish = new THREE.Vector3();
-    this.stats = { jumps: 0, doubles: 0, rolls: 0, hits: 0, blocks: 0, parries: 0, heavies: 0, lights: 0, moved: 0, lookMoved: 0 };
+    this.stats = { jumps: 0, doubles: 0, dashes: 0, airDashes: 0, rolls: 0, hits: 0, blocks: 0, parries: 0, heavies: 0, lights: 0, moved: 0, lookMoved: 0 };
   }
   get blocking() { return this.state === 'block'; }
   get radius() { return 0.5; }
@@ -83,7 +83,8 @@ export class Player {
     if (this.emoteT > 0) { this.emoteT -= dt; if (this.emoteT <= 0) this.emoteKind = null; }
     const b = this.body, v = this.vel;
     const ground = b.onGround;
-    if (ground) { this.coyote = PH.coyote; this.canDouble = true; this.airAttackUsed = false; this.lastGround.copy(this.pos); this.airT = 0; } else { this.coyote -= dt; this.airT += dt; }
+    if (this.dashCool > 0) this.dashCool -= dt;
+    if (ground) { this.coyote = PH.coyote; this.canDouble = true; this.airAttackUsed = false; this.airDashUsed = false; this.lastGround.copy(this.pos); this.airT = 0; } else { this.coyote -= dt; this.airT += dt; }
     if (input.just('jump')) this.jumpBuf = PH.buffer; else this.jumpBuf -= dt;
 
     // wish direction (camera relative)
@@ -98,17 +99,26 @@ export class Player {
     const st = this.state;
     const canAct = st === 'idle' || st === 'run' || st === 'air' || st === 'block';
     if (this.alive) {
-      if (canAct && input.just('roll') && (ground || this.coyote > 0) && this.stamina >= STA.roll * 0.5) this.startRoll();
+      if (canAct && input.just('dash') && this.dashCool <= 0 && (ground || this.coyote > 0 || !this.airDashUsed) && this.stamina >= STA.dash * 0.5) this.startDash(ground || this.coyote > 0);
+      else if (canAct && input.just('roll') && (ground || this.coyote > 0) && this.stamina >= STA.roll * 0.5) this.startRoll();
       else if (canAct && !this.attack && input.just('light') && ((ground || this.coyote > 0) || !this.airAttackUsed) && this.stamina > 0) this.startAttack(ground || this.coyote > 0 ? 'light1' : 'air', game);
       else if (canAct && !this.attack && input.just('heavy') && (ground || this.coyote > 0) && this.stamina > 0) this.startAttack('heavy', game);
       else if (this.attack && this.attack.move.next && input.just('light')) this.attack.queued = true;
       else if (this.attack && this.attack.phase === 'recovery' && this.attack.u > 0.55 && input.just('roll') && this.stamina >= STA.roll * 0.5) this.startRoll();
+      else if (this.attack && this.attack.phase === 'recovery' && this.attack.u > 0.4 && input.just('dash') && this.dashCool <= 0 && this.stamina >= STA.dash * 0.5) this.startDash(ground);
     }
     const st2 = this.state; // re-read: an action may have just changed it
     let moveScale = 1, canTurn = true, applyMove = true;
     if (st2 === 'dead') { this.deadT += dt; applyMove = false; moveScale = 0; }
     else if (st2 === 'hurt') { this.hurtT -= dt; moveScale = 0; canTurn = false; if (this.hurtT <= 0) this.state = ground ? 'idle' : 'air'; }
     else if (st2 === 'stagger') { this.stunT -= dt; moveScale = 0; canTurn = false; if (this.stunT <= 0) this.state = 'idle'; }
+    else if (st2 === 'dash') {
+      this.dashT += dt; const u = this.dashT / PH.dashTime; canTurn = false; moveScale = 0;
+      const sp = PH.dashSpeed * (u < 0.7 ? 1 : 1 - (u - 0.7) * 2); v.x = this.dashDir.x * sp; v.z = this.dashDir.z * sp; v.y = 0;
+      this.iframes = Math.max(this.iframes, u < 0.55 ? 0.02 : 0);
+      if (this.dashT > 0.05 && this.time % 0.05 < dt) this.fx.streak(this.pos.clone().add(new THREE.Vector3(0, 1.0, 0)), this.yaw);
+      if (u >= 1) { this.state = ground ? 'idle' : 'air'; this.dashT = 0; this.vel.x *= 0.5; this.vel.z *= 0.5; }
+    }
     else if (st2 === 'roll') {
       this.rollT += dt; const u = this.rollT / PH.rollTime; canTurn = false; moveScale = 0;
       const sp = PH.rollSpeed * (1 - u * 0.55); v.x = this.rollDir.x * sp; v.z = this.rollDir.z * sp;
@@ -127,7 +137,7 @@ export class Player {
     }
 
     if (applyMove) {
-      const target = PH.run * moveScale * (wishLen > 0.1 ? 1 : 0);
+      const target = PH.run * moveScale * (this.slow || 1) * (wishLen > 0.1 ? 1 : 0);
       const acc = (ground ? PH.accel : PH.airAccel);
       if (wishLen > 0.1 && moveScale > 0) {
         v.x = approach(v.x, this.wish.x * target, acc * dt); v.z = approach(v.z, this.wish.z * target, acc * dt);
@@ -137,18 +147,22 @@ export class Player {
       }
       if (this.alive && this.jumpBuf > 0 && this.state !== 'roll' && this.state !== 'hurt' && this.state !== 'stagger' && !(this.attack && !this.attack.move.air)) {
         if (this.coyote > 0) { v.y = PH.jump; this.coyote = 0; this.jumpBuf = 0; this.jumpT = 0; this.stats.jumps++; this.sfx('jump'); this.state = 'air'; this.fx.burst(this.pos.clone(), 0xcfe6c0, 6, 2, { flat: true, up: 1, gravity: 8, life: 0.3 }); }
-        else if (this.canDouble && !ground) { v.y = PH.djump; this.canDouble = false; this.jumpBuf = 0; this.flipT = 0; this.stats.doubles++; this.sfx('djump'); this.fx.ring(this.pos.clone(), 0x9fd3ff, 0.3, 1.6, 0.35, 0.08); this.fx.burst(this.pos.clone(), 0x9fd3ff, 10, 3, { flat: true, up: 0.5, gravity: 4, life: 0.35 }); }
+
       }
       if (!ground && v.y > 2 && input.released.has('Space') && this.state === 'air') v.y *= 0.55;
     }
     // a little hang at the apex makes jumps read; falling is faster than rising
-    const gScale = this.attack && this.attack.move.air && this.attack.phase !== 'recovery' ? 0.35 : (!ground && Math.abs(v.y) < 2.5 ? 0.62 : (v.y < 0 ? 1.18 : 1));
+    const gScale = this.state === 'dash' ? 0 : this.attack && this.attack.move.air && this.attack.phase !== 'recovery' ? 0.35 : (!ground && Math.abs(v.y) < 2.5 ? 0.62 : (v.y < 0 ? 1.18 : 1));
     v.y -= PH.gravity * dt * gScale;
     v.y = Math.max(v.y, -PH.maxFall);
     const fallSpeed = -v.y;
     const prevX = this.pos.x, prevZ = this.pos.z;
     this.phys.step(b, dt);
     this.stats.moved += Math.hypot(this.pos.x - prevX, this.pos.z - prevZ);
+    if (b.onGround && b.groundBox && b.groundBox.bounce && this.alive) { // bouncy cap
+      v.y = b.groundBox.bounce; b.onGround = false; this.coyote = 0; this.jumpT = 0; this.airDashUsed = false; if (this.state !== 'air') this.state = 'air'; this.attack = null;
+      this.sfx('boing'); this.fx.ring(this.pos.clone(), 0xff9aa8, 0.4, 2.4, 0.4, 0.1); this.fx.burst(this.pos.clone(), 0xffd0d8, 14, 4, { flat: true, up: 2, gravity: 6, life: 0.4 }); this.emote('happy', 0.8);
+    }
     if (b.onGround && !this.wasGround) {
       const hard = fallSpeed > 16; this.sfx('land', { hard }); this.landT = hard ? 0.26 : 0.12; this.landHard = hard;
       this.fx.burst(this.pos.clone(), 0xd8c8a8, hard ? 14 : 6, hard ? 4 : 2, { flat: true, up: 1, gravity: 10, life: 0.35 });
@@ -158,7 +172,7 @@ export class Player {
     }
     this.wasGround = b.onGround;
     const hs = Math.hypot(v.x, v.z); this.speedFrac = clamp(hs / PH.run, 0, 1);
-    if (ground && hs > 1 && this.state !== 'roll') { const prev = this.runPhase; this.runPhase += dt * (4.2 + hs * 1.0); if (Math.floor(prev / Math.PI) !== Math.floor(this.runPhase / Math.PI)) { this.sfx('step'); if (hs > 5) this.fx.burst(this.pos.clone(), 0xd8c8a8, 2, 1.2, { flat: true, up: 0.6, gravity: 8, life: 0.25 }); } }
+    if (ground && hs > 1 && this.state !== 'roll') { const prev = this.runPhase; this.runPhase += dt * (4.2 + hs * 1.0); if (Math.floor(prev / Math.PI) !== Math.floor(this.runPhase / Math.PI)) { const gb = b.groundBox; this.sfx('step', { wood: !!(gb && (gb.tag === 'branch' || gb.tag === 'root' || gb.tag === 'stump' || gb.tag === 'rotten' || gb.kind === 'crumble' || gb.tag === 'crown')) }); if (hs > 5) this.fx.burst(this.pos.clone(), 0xd8c8a8, 2, 1.2, { flat: true, up: 0.6, gravity: 8, life: 0.25 }); } }
     else if (ground) this.runPhase = 0;
 
     this.lookAt = this.nearestEnemy(game, 10, -0.2);
@@ -177,6 +191,13 @@ export class Player {
     if (this.wish.lengthSq() > 0.01) this.rollDir.copy(this.wish); else this.forward(this.rollDir);
     this.yaw = Math.atan2(this.rollDir.x, this.rollDir.z); this.sfx('roll');
     this.fx.burst(this.pos.clone(), 0xd8c8a8, 8, 3, { flat: true, up: 1, gravity: 10, life: 0.35 });
+  }
+  startDash(grounded) {
+    this.stamina -= STA.dash; this.staDelay = STA.delay; this.state = 'dash'; this.dashT = 0; this.attack = null; this.t = 0; this.dashCool = PH.dashCool; this.flipT = 0;
+    this.stats.dashes++; if (!grounded) { this.airDashUsed = true; this.stats.airDashes++; }
+    if (this.wish.lengthSq() > 0.01) this.dashDir.copy(this.wish); else this.forward(this.dashDir);
+    this.yaw = Math.atan2(this.dashDir.x, this.dashDir.z); this.sfx('dash');
+    this.fx.burst(this.pos.clone().add(new THREE.Vector3(0, 0.6, 0)), 0x9fd3ff, 12, 4, { flat: true, up: 0.5, gravity: 3, life: 0.35 }); this.fx.ring(this.pos.clone(), 0x9fd3ff, 0.3, 1.4, 0.3, 0.07);
   }
   startAttack(name, game) {
     const mv = MOVES[name];
@@ -259,7 +280,7 @@ export class Player {
     }
     else if (st === 'air' && !this.attack) {
       const vy = this.vel.y;
-      if (this.flipT < 0.45) { // double-jump somersault
+      if (false) { // (double jump removed; dash has its own pose)
         const u = this.flipT / 0.45; q.tumble = ease(u) * Math.PI * 2; q.hipR = -1.4; q.hipL = -1.4; q.kneeR = 2.0; q.kneeL = 2.0; q.footR = 0.4; q.footL = 0.4;
         q.armR = { x: -1.2, y: 0, z: 0.5 }; q.armL = { x: -1.2, y: 0, z: -0.5 }; q.foreR = -1.5; q.foreL = -1.5; q.headX = 0.5; q.bodyY = -0.1; q.cape = -0.6; q.lean = 0; q.eyeOpen = 0.2; q.mouthW = 0.7; rate = Infinity;
       } else if (this.jumpT < 0.14) { // takeoff stretch
@@ -280,6 +301,11 @@ export class Player {
       q.armL = { x: -1.35, y: 0.1, z: -0.2 }; q.foreL = -0.4; q.foreLy = 1.45; q.armR = { x: 0.7, y: 0, z: 0.5 }; q.foreR = -0.9;
       q.lean = 0.1; q.bodyY = -0.09; q.hipR = -0.35; q.hipL = -0.35; q.kneeR = 0.6; q.kneeL = 0.6; q.footR = 0; q.footL = 0; q.headX = 0.1; q.cape = 0.1; q.tumble = 0; q.roll = 0; q.yaw = -0.25; q.hipRz = 0; q.hipLz = 0; q.bodyX = 0;
       q.browL = 0.35; q.browR = 0.35; q.mouthW = 0.7; q.eyeOpen = 0.75; rate = 22;
+    }
+    else if (st === 'dash') {
+      const u = clamp(this.dashT / PH.dashTime, 0, 1);
+      q.tumble = ease(u) * Math.PI * 2; q.bodyY = -0.15; q.hipR = -1.1; q.hipL = -1.1; q.kneeR = 1.6; q.kneeL = 1.6; q.footR = 0.5; q.footL = 0.5;
+      q.armR = { x: -1.0, y: 0, z: 0.5 }; q.armL = { x: -1.0, y: 0, z: -0.5 }; q.foreR = -1.4; q.foreL = -1.4; q.foreLy = 0.3; q.headX = 0.4; q.lean = 0; q.cape = 1.5; q.roll = 0; q.hipRz = 0; q.hipLz = 0; q.bodyX = 0; q.eyeOpen = 0.6; q.browL = 0.3; q.browR = 0.3; q.mouthW = 0.7; rate = Infinity;
     }
     else if (st === 'roll') {
       const u = clamp(this.rollT / PH.rollTime, 0, 1);

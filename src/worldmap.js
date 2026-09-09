@@ -8,7 +8,7 @@ import { sfx } from './audio.js';
 
 export const NODES = [
   { id: 'training', name: 'Training Yard', blurb: 'Learn the blade, the guard and the roll against a straw knight.', mode: 'tutorial', x: -16, z: 2 },
-  { id: 'wood', name: 'Goblin Wood', blurb: 'A glade, a goblin camp, the great hollow tree, and the Hollow Warden.', mode: 'adventure', x: -5, z: -2 },
+  { id: 'wood', name: 'Goblin Wood', blurb: 'A glade, a goblin camp, the Mushroom Hollow, the great hollow tree, the Canopy Walk, and the Goblin Warlord.', mode: 'adventure', x: -5, z: -2 },
   { id: 'gorge', name: 'The Sunken Gorge', blurb: 'Coming soon.', locked: true, x: 6, z: 3 },
   { id: 'crown', name: "The Warden's Crown", blurb: 'Coming soon.', locked: true, x: 16, z: -3 },
 ];

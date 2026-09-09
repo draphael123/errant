@@ -65,6 +65,11 @@ export class FX {
     this.scene.add(m);
     return { mesh: m, show(pos, yaw, u) { m.visible = true; m.position.set(pos.x, pos.y + 0.06, pos.z); m.rotation.y = yaw; m.material.opacity = 0.15 + u * 0.5; const s = 0.35 + u * 0.65; m.scale.set(s, s, 1); }, hide() { m.visible = false; } };
   }
+  streak(pos, yaw) {
+    const geo = new THREE.PlaneGeometry(0.18, 2.2); const mat = new THREE.MeshBasicMaterial({ color: 0xbfe6ff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    const m = new THREE.Mesh(geo, mat); m.rotation.order = 'YXZ'; m.rotation.set(Math.PI / 2, yaw, 0); m.position.copy(pos); m.position.x += (Math.random() - 0.5) * 0.6; m.position.y += (Math.random() - 0.5) * 0.8; m.renderOrder = 997;
+    this.scene.add(m); this.transients.push({ mesh: m, life: 0.22, max: 0.22, update: (o, u) => { o.mesh.material.opacity = 0.5 * (1 - u); o.mesh.scale.y = 1 + u * 0.6; } });
+  }
   hitstop(sec) { if (S.hitstop) this.freeze = Math.max(this.freeze, sec); }
   // A number that pops up, drifts upward and fades. Cheap: one small canvas per number.
   number(pos, text, color = '#ffd27a', size = 1) {

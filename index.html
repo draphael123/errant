@@ -85,6 +85,8 @@
   .bar > i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #a8f2b4, var(--sta) 55%, #3f9a52); transition: width .06s linear; }
   .bar > i.low { background: linear-gradient(180deg, #ffb08a, #d9573a 55%, #8a2f1a); }
   #stamina-wrap { display: flex; align-items: center; gap: 8px; }
+  #dash-wrap { display: flex; align-items: center; gap: 8px; margin-top: 6px; } #dash-wrap .lbl { font-size: 10px; letter-spacing: .18em; color: #cdbf9a; width: 52px; }
+  .bar.dash { width: 90px; height: 6px; } .bar.dash > i { background: #7aa8c8; } .bar.dash > i.ready { background: var(--steel); box-shadow: 0 0 8px var(--steel); }
   #stamina-wrap .lbl { font-size: 10px; letter-spacing: .18em; color: #cdbf9a; width: 52px; }
   #gems { position: absolute; right: 24px; top: 18px; display: flex; align-items: center; gap: 8px; font-size: 20px; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.7); padding: 8px 14px; background: linear-gradient(180deg, rgba(14,10,22,.55), rgba(14,10,22,.25)); border: 1px solid rgba(231,194,106,.22); border-radius: 6px; }
   #gems .g { width: 14px; height: 14px; background: linear-gradient(135deg, #dffcff, #5fdcf0); transform: rotate(45deg); box-shadow: 0 0 12px #7ff0ff; }
@@ -143,6 +145,7 @@
   <div id="vitals">
     <div id="hpwrap"><span class="lbl">HEALTH</span><div class="bar hp"><i id="hpghost"></i><i id="hpfill"></i></div><span id="hptext" class="num">100</span></div>
     <div id="stamina-wrap"><span class="lbl">VIGOUR</span><div class="bar"><i id="stamina"></i></div></div>
+    <div id="dash-wrap"><span class="lbl">DASH</span><div class="bar dash"><i id="dashfill"></i></div></div>
   </div>
   <div id="gems"><span class="g"></span><span id="gemcount">0</span><span style="opacity:.6">/</span><span id="gemtotal">0</span></div>
   <div id="lockhint">CLICK TO CAPTURE THE MOUSE · ESC TO PAUSE</div>
@@ -150,7 +153,7 @@
   <div id="toast"></div>
   <div id="objective" hidden><div class="check" id="obj-check"></div><div class="kicker" id="obj-kicker">TRAINING</div><div class="title" id="obj-title"></div><div class="text" id="obj-text"></div></div>
   <div id="hint"></div>
-  <div id="bossbar"><div class="name" id="bossname">THE HOLLOW WARDEN</div><div class="bar"><i id="bosshp"></i></div><div class="bar poise"><i id="bosspoise"></i></div></div>
+  <div id="bossbar"><div class="name" id="bossname">THE GOBLIN WARLORD</div><div class="bar"><i id="bosshp"></i></div><div class="bar poise"><i id="bosspoise"></i></div></div>
 </div>
 
 <div id="title" class="screen">
@@ -163,8 +166,8 @@
     <button class="m" id="btn-settings">Settings</button>
     <button class="m" id="btn-controls">Controls</button>
   </div>
-  <div class="foot"><b>WASD</b> move · <b>SPACE</b> jump, again to double · <b>LMB</b> strike · <b>E</b> heavy · <b>RMB</b> guard · <b>SHIFT</b> roll · gamepad supported</div>
-  <div class="ver">ERRANT · v0.4 · music: Joth, pauliuw (CC0)</div>
+  <div class="foot"><b>WASD</b> move · <b>SPACE</b> jump · <b>SHIFT</b> dash · <b>LMB</b> strike · <b>E</b> heavy · <b>RMB</b> guard · <b>CTRL</b> roll · gamepad supported</div>
+  <div class="ver">ERRANT · v0.5 · music: Joth, pauliuw (CC0)</div>
 </div>
 
 <div id="settings" class="screen" hidden>
@@ -181,11 +184,12 @@
     <div class="scroll">
     <table class="keys">
       <tr><td>Move</td><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows <span class="pad">left stick</span> · relative to the camera</td></tr>
-      <tr><td>Jump</td><td><kbd>Space</kbd> <span class="pad">A</span> · hold for height · press again in the air to double jump (a somersault)</td></tr>
+      <tr><td>Jump</td><td><kbd>Space</kbd> <span class="pad">A</span> · hold for height, tap for a hop</td></tr>
+      <tr><td>Dash</td><td><kbd>Shift</kbd> <span class="pad">B</span> · a burst forward on the ground or in the air (one per jump) · brief invulnerability · cancels the end of a strike</td></tr>
       <tr><td>Strike</td><td><kbd>LMB</kbd> or <kbd>J</kbd> <span class="pad">X</span> · three strikes chain · works in the air</td></tr>
       <tr><td>Heavy</td><td><kbd>E</kbd> or <kbd>K</kbd> <span class="pad">Y / RT</span> · slow, cannot be interrupted, breaks poise</td></tr>
       <tr><td>Guard</td><td>hold <kbd>RMB</kbd> or <kbd>L</kbd> <span class="pad">LB / RB</span> · blocks from the front, drains vigour · a guard raised just before a hit lands <em>parries</em> and staggers the attacker</td></tr>
-      <tr><td>Roll</td><td><kbd>Shift</kbd> <span class="pad">B</span> · invulnerable through the middle of the roll · can cancel the end of a strike</td></tr>
+      <tr><td>Roll</td><td><kbd>Ctrl</kbd> · a longer dodge with invulnerability through the middle</td></tr>
       <tr><td>Camera</td><td>mouse when captured <span class="pad">right stick</span> · <kbd>[</kbd> <kbd>]</kbd> turn without the mouse · the camera swings behind you while you run (Settings)</td></tr>
       <tr><td>Pause</td><td><kbd>Esc</kbd> <span class="pad">Start</span> · <kbd>N</kbd> <span class="pad">Select</span> skips a tutorial step · <kbd>F3</kbd> frame counter detail</td></tr>
     </table>
@@ -216,7 +220,7 @@
 
 <div id="victory" class="screen" hidden>
   <div class="orn">THE RUIN IS QUIET</div>
-  <h1>THE WARDEN FALLS</h1>
+  <h1>THE WARLORD FALLS</h1>
   <div class="stats" id="victory-stats"></div>
   <div class="menu"><button class="m primary" id="btn-victory-again">Set Forth Again</button><button class="m" id="btn-victory-title">Title</button></div>
 </div>

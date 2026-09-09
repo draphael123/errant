@@ -7,10 +7,10 @@ import { ShaderPass } from '../vendor/three/examples/jsm/postprocessing/ShaderPa
 import { OutputPass } from '../vendor/three/examples/jsm/postprocessing/OutputPass.js';
 import { S, setSetting, resetSettings, onSetting, renderSettings } from './settings.js';
 import { Input } from './input.js';
-import { initAudio, sfx, applyVolumes, startMusic, stopMusic } from './audio.js';
+import { initAudio, sfx, applyVolumes, startMusic, stopMusic, startAmbience, stopAmbience, setAmbienceLevel, audioProbe } from './audio.js';
 import { Physics } from './physics.js';
 import { createWorld } from './world.js';
-import { buildLevel, updateLevel } from './level.js';
+import { buildLevel, updateLevel, updateCritters, auditLevel } from './level.js';
 import { FX } from './fx.js';
 import { FollowCamera } from './camera.js';
 import { HUD } from './hud.js';
@@ -77,6 +77,8 @@ const game = {
   checkpoint: level.shrines[0], stats: { deaths: 0, gems: 0, start: 0, elapsed: 0, kills: 0 },
   bossActive: false, boss: null, dummy: null, won: false, winSoon: 0, falling: false, tutorialShown: new Set(),
   onEnemyDied(e) { this.stats.kills++; if (e.isBoss) this.winSoon = 2.6; },
+  summon(n) { if (!this.level.yard) return; const specs = []; for (let i = 0; i < n; i++) { const g = this.level.yard.gates[i % this.level.yard.gates.length]; specs.push({ type: 'goblin', kind: i % 2 ? 'skirmisher' : 'knave', x: g.x * 0.9, y: this.level.yard.y, z: this.level.yard.cz + (g.z - this.level.yard.cz) * 0.9, patrol: 2, add: true }); } const adds = spawnEnemies(this, specs); for (const a of adds) { a.state = 'chase'; this.fx.burst(a.pos.clone().add(new THREE.Vector3(0, 1, 0)), 0xff8a4a, 12, 4); } this.enemies.push(...adds); },
+  onBossRage(b) { const f = this.level.yardFire; if (f) { f.r = 3.2; f.dps = 8; this.fireT = 6; this.fx.ring(new THREE.Vector3(f.x, f.y, f.z), 0xff7a2a, 0.5, 3.2, 0.6, 0.3); this.fx.burst(new THREE.Vector3(f.x, f.y + 0.5, f.z), 0xffa040, 40, 6, { life: 0.9 }); this.hud.hint('The campfire spills across the yard. Keep off the embers.', 4); } },
 };
 game.player = new Player(scene, phys, fx, sfxL, hud);
 const tutorial = new Tutorial(game);
@@ -88,7 +90,8 @@ function resetRun(mode) {
   const specs = mode === 'tutorial' ? [...level.enemySpecs, { type: 'dummy', x: -4.5, y: 0, z: 3.5, yaw: -1.2 }] : level.enemySpecs;
   game.enemies = spawnEnemies(game, specs);
   game.boss = game.enemies.find(e => e.isBoss); game.dummy = game.enemies.find(e => e.name === 'Training Dummy') || null;
-  game.bossActive = false; game.won = false; game.winSoon = 0; game.falling = false;
+  game.bossActive = false; game.won = false; game.winSoon = 0; game.falling = false; game.areasSeen = new Set(); game.fireT = 0;
+  if (level.yardFire) { level.yardFire.r = 1.0; level.yardFire.dps = 0; }
   for (const w of level.bossWalls) w.solid = false; level.bossGate.set(0); level.portal.group.visible = false;
   for (const g of level.gems) { g.taken = false; g.mesh.visible = true; }
   for (const h of level.hearts) { h.taken = false; h.mesh.visible = true; }
@@ -98,7 +101,7 @@ function resetRun(mode) {
   game.stats = { deaths: 0, gems: 0, start: performance.now(), elapsed: 0, kills: 0 };
   game.tutorialShown = new Set();
   game.player.respawn(level.spawn, 0);
-  game.player.stats = { jumps: 0, doubles: 0, rolls: 0, hits: 0, blocks: 0, parries: 0, heavies: 0, lights: 0, moved: 0, lookMoved: 0 };
+  game.player.stats = { jumps: 0, doubles: 0, dashes: 0, airDashes: 0, rolls: 0, hits: 0, blocks: 0, parries: 0, heavies: 0, lights: 0, moved: 0, lookMoved: 0 };
   followCam.reset(level.spawn, 0);
   hud.setHealth(100, 100); hud.setGems(0, level.gemTotal); hud.boss(false);
   if (mode === 'tutorial') tutorial.start(); else tutorial.stop();
@@ -116,10 +119,10 @@ function setState(st) {
   else { input.wantLock = false; input.unlock(); }
 }
 function startGame(mode = 'adventure') {
-  worldMap.hide(); initAudio(); resetRun(mode); setState('playing'); startMusic('explore');
+  worldMap.hide(); initAudio(); resetRun(mode); setState('playing'); startMusic('explore'); startAmbience();
   $('fade').style.opacity = 0;
   if (mode === 'tutorial') { hud.toast('THE TRAINING YARD', 2.2); }
-  else { hud.toast('THE LANDING', 2.2); hud.hint('Reach the courtyard beyond the stepping stones.', 5); }
+  else { hud.toast('THE LANDING', 2.2); hud.hint('Reach the goblin camp beyond the stepping stones.', 5); }
 }
 // the title theme can only start after a gesture: first click or key on the title screen
 function titleMusic() { if (game.state === 'title') { initAudio(); startMusic('title'); } }
@@ -135,10 +138,10 @@ $('btn-resume').onclick = () => resume();
 $('btn-pause-settings').onclick = () => { sfx('ui'); settingsReturn = 'pause'; renderSettings($('settings-rows')); show('settings'); };
 $('btn-pause-controls').onclick = () => { sfx('ui'); settingsReturn = 'pause'; show('controls'); };
 $('btn-respawn').onclick = () => { sfx('ui'); returnToShrine(false); resume(); };
-$('btn-quit').onclick = () => { sfx('ui'); tutorial.stop(); setState('title'); show('title'); startMusic('title'); };
+$('btn-quit').onclick = () => { sfx('ui'); tutorial.stop(); setState('title'); show('title'); startMusic('title'); stopAmbience(); };
 $('btn-dead-continue').onclick = () => { sfx('ui'); returnToShrine(true); setState('playing'); };
 $('btn-victory-again').onclick = () => { sfx('ui'); openMap(); };
-$('btn-victory-title').onclick = () => { sfx('ui'); setState('title'); show('title'); startMusic('title'); };
+$('btn-victory-title').onclick = () => { sfx('ui'); setState('title'); show('title'); startMusic('title'); stopAmbience(); };
 
 function pause() { if (game.state !== 'playing') return; setState('paused'); show('pause'); sfx('ui'); }
 function resume() { if (game.state !== 'paused') return; setState('playing'); }
@@ -154,7 +157,8 @@ document.addEventListener('pointerlockchange', () => { if (!document.pointerLock
 window.addEventListener('blur', () => { if (game.state === 'playing') pause(); });
 
 onSetting((k) => {
-  if (['master', 'music', 'sfx'].includes(k)) applyVolumes();
+  if (['master', 'music', 'sfx', 'ambience'].includes(k)) applyVolumes();
+  if (k === 'musicSource') { const mode = game.state === 'playing' || game.state === 'dead' || game.state === 'paused' ? (game.bossActive ? 'boss' : 'explore') : 'title'; stopMusic(); startMusic(mode); }
   if (k === 'shadows') world.applyShadowSetting();
   if (k === 'renderScale' || k === 'dpr') resize();
   if (k === 'mist') for (const g of level.mists) g.visible = S.mist;
@@ -168,7 +172,9 @@ function returnToShrine(afterDeath) {
   for (const b of game.projectiles) scene.remove(b.mesh); game.projectiles.length = 0;
   if (game.boss && game.boss.alive && game.bossActive) {
     game.bossActive = false; for (const w of level.bossWalls) w.solid = false; level.bossGate.set(0);
-    const spec = game.boss.spec; game.boss.pos.set(spec.x, spec.y, spec.z); game.boss.vel.set(0, 0, 0); game.boss.hp = game.boss.hpMax; game.boss.poise = 0; game.boss.state = 'dormant'; game.boss.phase = 1; game.boss.telegraph.hide(); game.boss.yaw = Math.PI;
+    if (game.boss.reset) game.boss.reset(game.boss.spec); else { const spec = game.boss.spec; game.boss.pos.set(spec.x, spec.y, spec.z); game.boss.vel.set(0, 0, 0); game.boss.hp = game.boss.hpMax; game.boss.poise = 0; game.boss.state = 'dormant'; game.boss.phase = 1; game.boss.telegraph.hide(); game.boss.yaw = Math.PI; }
+    for (const a of game.enemies.filter(e => e.isAdd)) a.dispose(); game.enemies = game.enemies.filter(e => !e.isAdd);
+    if (level.yardFire) { level.yardFire.r = 1.0; level.yardFire.dps = 0; game.fireT = 0; }
     hud.boss(false); startMusic('explore');
   }
   hud.setHealth(game.player.hp, game.player.hpMax);
@@ -204,6 +210,14 @@ function updateGame(dt) {
   p.update(dt, input, camF, game);
   updateLevel(level, dt, game.time, p, sfxL);
   for (const e of game.enemies) { const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, dy = e.pos.y - p.pos.y; const far = dx * dx + dz * dz + dy * dy > 75 * 75; if (e.alive) e.rig.group.visible = !far; if (!far || e.isBoss || S.farEnemies) e.update(dt); }
+  updateCritters(level, dt, game.time, p.pos, phys);
+  // hazards (campfires): touching costs health and shoves you back; the spilt fire burns over time
+  if (game.fireT > 0) { game.fireT -= dt; if (game.fireT <= 0 && level.yardFire) { level.yardFire.r = 1.0; level.yardFire.dps = 0; } }
+  for (const h of level.hazards) { const d = Math.hypot(p.pos.x - h.x, p.pos.z - h.z); if (d < h.r + 0.4 && Math.abs(p.pos.y - h.y) < 1.5 && p.alive) { if (h.dps) { p.hp -= h.dps * dt; hud.setHealth(Math.max(0, p.hp), p.hpMax); if (Math.random() < dt * 6) fx.burst(p.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), 0xff8a2a, 3, 2, { up: 3, gravity: -2, life: 0.5 }); if (p.hp <= 0) { p.hp = 0; die(); } } else { const res = p.takeDamage(h.touch, new THREE.Vector3(h.x, h.y, h.z), { knock: 7, unblockable: true }); if (res === 'hit') hud.hint('The fire bites.', 1.5); } } }
+  // spore clouds slow you
+  p.slow = 1; for (const s of level.spores) if (Math.hypot(p.pos.x - s.x, p.pos.z - s.z) < s.r && Math.abs(p.pos.y - s.y) < 3) p.slow = 0.55;
+  // named areas
+  for (const a of level.areas) if (!game.areasSeen.has(a.name) && p.pos.z > a.z0 && p.pos.z < a.z1 && Math.abs(p.pos.y - a.y) < 8) { game.areasSeen.add(a.name); hud.toast(a.name, 2.4); }
   updateProjectiles(game, dt);
   fx.update(dt);
   tutorial.update(dt, input);
@@ -215,24 +229,27 @@ function updateGame(dt) {
   if (p.pos.y < p.lastGround.y - KILL_Y_BELOW || p.pos.y < -60) fall();
 
   if (p.pos.z > 8 && p.pos.z < 20) tutorialHint('jump', 'SPACE to jump. Hold it for a higher leap.');
-  if (p.pos.z > 21 && p.pos.z < 40) tutorialHint('double', 'Press SPACE again in the air for a double jump.');
+  if (p.pos.z > 21 && p.pos.z < 40) tutorialHint('dash', 'SHIFT dashes, on the ground or in the air. Jump, then dash, to cross the wide gaps.');
   if (p.pos.z > 44 && p.pos.z < 66 && p.pos.y > 5) tutorialHint('combat', 'Strike with LMB (three in a row). Hold RMB to guard. SHIFT rolls through attacks.', 7);
-  if (p.pos.z > 67 && p.pos.z < 95) tutorialHint('bolts', 'Slingers throw stones. Guard to turn them aside, or roll.', 6);
-  if (p.pos.z > 100 && p.pos.y > 8 && p.pos.y < 30) tutorialHint('crumble', 'Rotten wood gives way. Keep moving.', 5);
-  if (p.pos.z > 118 && p.pos.y > 32) tutorialHint('tower', 'The Warden waits beyond. Guard breaks poise; heavy strikes (E) break it faster.', 6);
+  if (p.pos.z > 71 && p.pos.z < 100) tutorialHint('bolts', 'Ride the swinging log across the gorge. Slingers throw stones: guard, or dash.', 6);
+  if (p.pos.z > 158 && p.pos.z < 178 && p.pos.y > 10 && p.pos.y < 34) tutorialHint('crumble', 'Rotten branches snap underfoot. Keep moving.', 5);
+  if (p.pos.z > 205 && p.pos.y > 28) tutorialHint('yard', 'The Warlord waits below. Heavy strikes (E) break poise fastest; a staggered boss takes full punishment.', 6);
+  if (p.pos.z > 101 && p.pos.z < 126 && p.pos.y > 5) tutorialHint('caps', 'Land on the big mushroom caps to bounce. Spore clouds slow you.', 6);
 
   const A = level.bossArena;
   if (!game.bossActive && game.boss && game.boss.alive && p.pos.z > A.triggerZ && p.pos.y > A.y - 1 && Math.hypot(p.pos.x - A.cx, p.pos.z - A.cz) < A.r) {
-    game.bossActive = true; for (const w of level.bossWalls) w.solid = true; game.boss.wake(); startMusic('boss'); hud.toast('THE HOLLOW WARDEN', 3); hud.hint('Jump over the shockwave. Roll through the charge. Punish the stagger.', 7);
+    game.bossActive = true; for (const w of level.bossWalls) w.solid = true; game.boss.wake(); startMusic('boss'); hud.toast('THE GOBLIN WARLORD', 3); hud.hint('Jump the shockwave. Dash through the charge. Guard the stones. Punish the stagger.', 7); game.drumT = 0;
   }
   for (const e of game.enemies) if (e.bar) e.bar.update(dt, camera, e);
-  if (game.bossActive) { level.bossGate.set(Math.min(1, level.bossGate.wall.material.opacity / 0.18 + dt * 1.5)); hud.boss(game.boss.alive, game.boss.hp / game.boss.hpMax, game.boss.poiseFrac, 'THE HOLLOW WARDEN');
+  if (game.bossActive && game.boss.alive) { game.drumT = (game.drumT || 0) + dt; if (game.drumT > (game.boss.phase === 2 ? 0.55 : 0.8)) { game.drumT = 0; sfxL('drum'); } }
+  if (game.bossActive) { level.bossGate.set(Math.min(1, level.bossGate.wall.material.opacity / 0.18 + dt * 1.5)); hud.boss(game.boss.alive, game.boss.hp / game.boss.hpMax, game.boss.poiseFrac, 'THE GOBLIN WARLORD');
   for (const e of game.enemies) if (e.bar) e.bar.update(dt, camera, e); }
   if (game.winSoon > 0) { game.winSoon -= dt; if (game.winSoon <= 0 && !game.won) { for (const w of level.bossWalls) w.solid = false; level.bossGate.set(0); hud.boss(false); win(); } }
 
-  hud.setHealth(Math.max(0, p.hp), p.hpMax); hud.setStamina(p.stamina / 100, p.stamina < 20);
+  hud.setHealth(Math.max(0, p.hp), p.hpMax); hud.setStamina(p.stamina / 100, p.stamina < 20); hud.setDash(1 - Math.max(0, p.dashCool) / 0.9);
+  setAmbienceLevel(p.pos.z > 42 && p.pos.z < 68 ? 0.45 : 1);
   world.update(dt, game.time, p.pos, camera);
-  followCam.speedFrac = p.speedFrac; followCam.rolling = p.state === 'roll';
+  followCam.speedFrac = p.speedFrac; followCam.rolling = p.state === 'roll'; followCam.dashing = p.state === 'dash';
   followCam.update(dt, input, p.pos, p.yaw, p.state === 'run', fx.shakeVec);
   hud.update(dt, input.locked, p.hp / p.hpMax);
 }
@@ -261,9 +278,9 @@ function tick(now) {
   // frame counter: sampled 4× a second
   perf.frames++; perf.acc += dt; perf.cpu += performance.now() - t0;
   if (perf.acc >= 0.25) { perf.fps = Math.round(perf.frames / perf.acc); perf.ms = (perf.cpu / perf.frames).toFixed(1); perf.calls = renderer.info.render.calls; perf.tris = renderer.info.render.triangles; perf.frames = 0; perf.acc = 0; perf.cpu = 0;
-    if (S.fps) perf.el.textContent = perf.fps + ' fps  ' + perf.ms + ' ms  ' + perf.calls + ' draws' + (perf.detail ? '\n' + (perf.tris / 1000).toFixed(0) + 'k tris  ' + renderer.domElement.width + '×' + renderer.domElement.height + '  dpr ' + renderer.getPixelRatio().toFixed(2) + '\nsfx: ' + (sfxLog.slice(-6).join('  ') || '-') + '\nstate ' + game.state + ' / ' + game.player.state + (input.locked ? ' locked' : '') : ''); }
+    if (S.fps) perf.el.textContent = perf.fps + ' fps  ' + perf.ms + ' ms  ' + perf.calls + ' draws' + (perf.detail ? '\n' + (perf.tris / 1000).toFixed(0) + 'k tris  ' + renderer.domElement.width + '×' + renderer.domElement.height + '  dpr ' + renderer.getPixelRatio().toFixed(2) + '\nsfx: ' + (sfxLog.slice(-6).join('  ') || '-') + '\n' + audioProbe() + '\nstate ' + game.state + ' / ' + game.player.state + (input.locked ? ' locked' : '') : ''); }
 }
-function frame(now) { rafQueued = false; try { tick(now); } catch (e) { console.error(e); } if (!rafQueued) { rafQueued = true; requestAnimationFrame(rafFrame); } }
+function frame(now) { rafQueued = false; if (now - lastTickAt < 4) { rafQueued = true; requestAnimationFrame(rafFrame); return; } try { tick(now); } catch (e) { console.error(e); } if (!rafQueued) { rafQueued = true; requestAnimationFrame(rafFrame); } }
 function rafFrame(now) { lastRafAt = now; frame(now); }
 rafQueued = true; requestAnimationFrame(rafFrame);
 // Fallback only when requestAnimationFrame has genuinely stopped (embedded panes); a merely slow frame must not
@@ -272,10 +289,10 @@ setInterval(() => { const now = performance.now(); if (now - lastRafAt > 300 && 
 
 // ---------------- debug / test API
 window.ERRANT = {
-  game, S, setSetting, tutorial, start: startGame, map: worldMap, openMap, perf, sfxLog,
+  game, S, setSetting, tutorial, start: startGame, map: worldMap, openMap, perf, sfxLog, audit: () => auditLevel(level, phys), level,
   state() { const p = game.player; return { state: game.state, mode: game.mode, player: { pos: p.pos.toArray().map(n => +n.toFixed(2)), vel: p.vel.toArray().map(n => +n.toFixed(2)), st: p.state, hp: p.hp, sta: Math.round(p.stamina), ground: p.body.onGround, yaw: +p.yaw.toFixed(2), stats: p.stats }, enemies: game.enemies.map(e => ({ n: e.name, st: e.state, hp: e.hp, alive: e.alive, pos: e.pos.toArray().map(n => +n.toFixed(1)) })), gems: game.stats.gems, boss: game.bossActive, checkpoint: game.checkpoint.name, tutorialStep: tutorial.active ? tutorial.step && tutorial.step.id : null }; },
   teleport(x, y, z) { game.player.pos.set(x, y, z); game.player.vel.set(0, 0, 0); game.player.lastGround.set(x, y, z); if (game.player.state === 'dead') game.player.state = 'idle'; followCam.reset(game.player.pos, game.player.yaw); },
-  go(where) { const P = { landing: [0, 0, -3], stones: [0, 0.5, 13], courtyard: [0, 6, 47], camp: [0, 6, 47], bridge: [0, 6, 64], ledge: [0, 7.5, 95], spiral: [0, 8.5, 105.4], cap: [0, 33, 112], arena: [0, 36, 136] }; const p = P[where]; if (p) this.teleport(...p); return p; },
+  go(where) { const P = { landing: [0, 0, -3], stones: [0, 0.5, 13], camp: [0, 6, 51], gorge: [0, 6.4, 82], ledge: [0, 7.5, 97], hollow: [0, 6.5, 110], roots: [0, 9, 140], tree: [0, 9.5, 159], spiral: [0, 11, 161.4], cap: [0, 35.5, 168], canopy: [11, 35, 182], yard: [0, 28, 218], arena: [0, 28, 218] }; const p = P[where]; if (p) this.teleport(...p); return p; },
   god(v = true) { game.player.god = v; },
   kill() { for (const e of game.enemies) if (e.alive && !e.isBoss && e.name !== 'Training Dummy') e.die(); },
   render() { render(); return renderer.domElement.toDataURL('image/jpeg', 0.75); },
