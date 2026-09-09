@@ -66,7 +66,21 @@ export class CharacterModel {
     this.actions = {};
     for (const clip of M.gltf.animations) { const short = clip.name.split('|').pop(); const a = this.mixer.clipAction(clip); a.enabled = true; this.actions[short] = a; this.actions[clip.name] = a; }
     this.current = null; this.driven = null; this._flash = 0; this.cur = {}; this.blinkT = 0; this.blink = 0;
-    this.height = height;
+    this.height = height; this.followers = [];
+  }
+  bone(name) { let b = null; this.model.traverse(o => { if (!b && o.name === name) b = o; }); return b; }
+  // Keep obj glued to a bone: world position from the bone, orientation = bone × offset rotation, then a local nudge.
+  attach(boneName, obj, { pos = [0, 0, 0], rot = [0, 0, 0] } = {}) {
+    const b = this.bone(boneName); if (!b) { console.warn('no bone', boneName); return null; }
+    obj.matrixAutoUpdate = true; this.group.parent ? this.group.parent.add(obj) : this.group.add(obj);
+    const f = { bone: b, obj, pos: new THREE.Vector3(...pos), q: new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot)) }; this.followers.push(f); return f;
+  }
+  updateFollowers() {
+    for (const f of this.followers) {
+      f.bone.getWorldQuaternion(f.obj.quaternion); f.obj.quaternion.multiply(f.q);
+      f.bone.getWorldPosition(f.obj.position); f.obj.position.add(f.pos.clone().applyQuaternion(f.obj.quaternion));
+      f.obj.visible = this.group.visible;
+    }
   }
   has(name) { return !!this.actions[name]; }
   // Crossfade to a looping (or one-shot) clip.
@@ -86,7 +100,7 @@ export class CharacterModel {
   }
   flash(seconds = 0.08) { this._flash = seconds; for (const m of this.mats) { m.emissive.setHex(0xffffff); m.emissiveIntensity = 0.9; } }
   tick(dt) {
-    this.mixer.update(dt);
+    this.mixer.update(dt); this.group.updateMatrixWorld(true); if (this.followers.length) this.updateFollowers();
     if (this._flash > 0) { this._flash -= dt; if (this._flash <= 0) for (const m of this.mats) { m.emissive.setHex(0); m.emissiveIntensity = 0; } }
   }
   blend() { /* procedural pose keys are ignored by skinned models */ }

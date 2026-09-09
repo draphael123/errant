@@ -327,3 +327,18 @@ export function buildDummy() {
 export function buildWarden() {
   return buildKnight({ scale: 2.1, palette: WARDEN_PALETTE, horns: true, greatsword: true, shield: false });
 }
+
+// Gear for the glTF Warlord, sized in metres for a 3.2 m goblin, pivots at the attachment point.
+export function buildWarlordGear() {
+  const rust = new THREE.MeshStandardMaterial({ color: 0x6d4a3a, roughness: 0.6, metalness: 0.3 }), bone = new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.7 }), wood = new THREE.MeshStandardMaterial({ color: 0x5a3a1e, roughness: 0.9 }), stone = new THREE.MeshStandardMaterial({ color: 0x7d7268, roughness: 0.95 }), gold = new THREE.MeshStandardMaterial({ color: 0xc9a24d, roughness: 0.4, metalness: 0.6 }), leather = new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.9 });
+  const antlers = new THREE.Group();
+  const cap = mesh(G.dome(0.5), rust, 0, 0.05, 0); cap.scale.set(1.1, 0.7, 1.1); antlers.add(cap); antlers.add(mesh(new THREE.TorusGeometry(0.46, 0.06, 6, 16), gold, 0, 0.12, 0)).rotation.x = Math.PI / 2;
+  for (const s of [-1, 1]) { const a1 = mesh(G.cone(0.08, 1.1, 6), bone, s * 0.35, 0.65, 0); a1.rotation.z = -s * 0.7; antlers.add(a1); const a2 = mesh(G.cone(0.06, 0.65, 6), bone, s * 0.68, 0.95, 0.1); a2.rotation.z = -s * 1.4; antlers.add(a2); const a3 = mesh(G.cone(0.05, 0.5, 6), bone, s * 0.55, 1.15, -0.12); a3.rotation.z = -s * 0.3; a3.rotation.x = -0.5; antlers.add(a3); }
+  const maul = new THREE.Group();
+  maul.add(mesh(G.cyl(0.07, 0.09, 2.4, 7), wood, 0, 1.0, 0)); maul.add(mesh(G.box(0.55, 0.5, 0.7), stone, 0, 2.2, 0)); maul.add(mesh(G.box(0.6, 0.12, 0.75), rust, 0, 2.2, 0));
+  for (let i = 0; i < 6; i++) { const a = i * 1.05; const sp = mesh(G.cone(0.06, 0.25, 4), rust, Math.cos(a) * 0.3, 2.2, Math.sin(a) * 0.38); sp.lookAt(new THREE.Vector3(Math.cos(a) * 3, 2.2, Math.sin(a) * 3)); sp.rotateX(Math.PI / 2); maul.add(sp); }
+  const shield = new THREE.Group();
+  shield.add(mesh(G.box(0.1, 0.9, 0.75), leather, 0, 0, 0)); shield.add(mesh(G.sph(0.42, 10, 8), bone, -0.12, 0.05, 0)); for (const z of [-0.14, 0.14]) shield.add(mesh(G.box(0.05, 0.12, 0.12), new THREE.MeshBasicMaterial({ color: 0x120a0a }), -0.5, 0.1, z));
+  for (const g of [antlers, maul, shield]) g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  return { antlers, maul, shield };
+}

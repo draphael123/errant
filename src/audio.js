@@ -42,7 +42,7 @@ async function loadManifest() {
   } catch (e) { manifestState = 'failed'; console.warn('sfx manifest failed', e); }
 }
 function loadTrack(url) {
-  if (tracks[url]) return tracks[url];
+  if (tracks[url]) return Promise.resolve(tracks[url]);
   const p = (async () => { const ab = await (await fetch(url)).arrayBuffer(); const b = await ctx.decodeAudioData(ab); tracks[url] = b; return b; })();
   tracks[url] = p; p.catch(() => { delete tracks[url]; }); return p;
 }

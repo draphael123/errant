@@ -3,7 +3,7 @@
 // Damage is in health points out of 100.
 import * as THREE from 'three';
 import { makeBody } from './physics.js';
-import { buildGoblin, buildWarden, buildDummy, buildWarlord } from './rigs.js';
+import { buildGoblin, buildWarden, buildDummy, buildWarlord, buildWarlordGear } from './rigs.js';
 import { diff } from './settings.js';
 import { turnToward } from './player.js';
 import { HealthBar } from './fx.js';
@@ -76,7 +76,7 @@ class Enemy {
     if (d < 0.3) return true;
     return _w.divideScalar(d).dot(this.forward(_v)) >= Math.cos(arc / 2);
   }
-  dispose() { const s = this.game.scene; s.remove(this.rig.group); if (this.telegraph && this.telegraph.mesh) s.remove(this.telegraph.mesh); if (this.tele) for (const k in this.tele) s.remove(this.tele[k].mesh); if (this.bar) this.bar.dispose(s); }
+  dispose() { const s = this.game.scene; s.remove(this.rig.group); if (this.telegraph && this.telegraph.mesh) s.remove(this.telegraph.mesh); if (this.tele) for (const k in this.tele) s.remove(this.tele[k].mesh); if (this.bar) this.bar.dispose(s); if (this.gear) for (const k in this.gear) s.remove(this.gear[k]); }
 }
 
 // ---------------------------------------------------------------- GOBLINS
@@ -341,7 +341,13 @@ const WL = {
 export class Warlord extends Enemy {
   constructor(game, spec) {
     super(game, spec, { name: 'The Goblin Warlord', half: 0.8, height: 3.2, radius: 1.15, hp: 40, poise: 9 });
-    this.isBoss = true; this.rig = buildWarlord(); game.scene.add(this.rig.group); this.rig.group.position.copy(this.pos);
+    this.isBoss = true;
+    this.usesModel = hasModel('goblin');
+    if (this.usesModel) {
+      this.rig = new CharacterModel('goblin', { height: 3.2, tint: 0xd89070 }); game.scene.add(this.rig.group);
+      this.gear = buildWarlordGear(); this.gear.antlers.scale.setScalar(1.35); this.rig.attach('Head', this.gear.antlers, { pos: [0, 0.75, 0.1], rot: [0, 0, 0] }); this.rig.attach('ArmR_end', this.gear.maul, { pos: [0, 0.25, 0], rot: [Math.PI, 0, 0] }); this.rig.attach('ArmL_end', this.gear.shield, { pos: [0, 0.35, 0], rot: [0, Math.PI, 0] });
+    } else { this.rig = buildWarlord(); game.scene.add(this.rig.group); }
+    this.rig.group.position.copy(this.pos);
     this.state = 'dormant'; this.yaw = Math.PI; this.phase = 1; this.atk = null; this.combo = 0; this.thinkT = 0; this.hornCool = 6; this.shots = 0; this.voiceHurt = 'bossHurt'; this.walkPhase = 0;
     this.tele = { sweep: game.fx.makeTelegraph(4.4, 2.6), slam: game.fx.makeTelegraph(7.5, Math.PI * 2), charge: game.fx.makeTelegraph(13, 0.55), barrage: game.fx.makeTelegraph(1.6, Math.PI * 2, 0xff8a2a) };
     this.telegraph = { hide: () => { for (const k in this.tele) this.tele[k].hide(); } };
@@ -408,7 +414,26 @@ export class Warlord extends Enemy {
     const dir = to.sub(from); const dist = dir.length(); dir.divideScalar(dist);
     spawnBolt(this.game, from, dir.multiplyScalar(16).add(new THREE.Vector3(0, dist * 0.3, 0)), this, 'stone', dmg); this.game.sfx('bolt');
   }
+  animateModel(dt) {
+    const M = this.rig, st = this.state; const hs = Math.hypot(this.vel.x, this.vel.z);
+    if (st === 'dead') { M.play('Death', { loop: false, clamp: true }); return; }
+    if (st === 'dormant') { M.drive('Idle', 0.2); return; }
+    if (st === 'rise') { M.play('Jump', { loop: false, clamp: true }); return; }
+    if (st === 'stagger') { M.play('HitRecieve', { loop: true, speed: 0.45 }); return; }
+    if (st === 'attack') {
+      const k = this.atk, A = WL[k], t = this.t, spd = this.phase === 2 ? 0.75 : 1, wind = A.windup * spd;
+      if (k === 'barrage') { const u = t < wind ? 0.45 * (t / wind) : 0.45 + ((t - wind) % (A.active / A.shots)) / (A.active / A.shots) * 0.4; M.drive('Attack', Math.min(0.95, u)); return; }
+      if (k === 'horn') { M.drive('Jump', t < wind ? 0.35 * (t / wind) : 0.35); return; }
+      if (k === 'charge' && t >= wind && t < wind + A.active) { M.play('Run', { speed: 1.6 }); return; }
+      const u = t < wind ? 0.5 * (t / wind) : t < wind + A.active ? 0.5 + 0.2 * ((t - wind) / A.active) : 0.7 + 0.3 * Math.min(1, (t - wind - A.active) / (A.recovery * (this.phase === 2 ? 0.78 : 1)));
+      M.drive('Attack', u); return;
+    }
+    if (hs > 1.8) { M.play('Run', { speed: 0.9 }); return; }
+    if (hs > 0.4) { M.play('Walk', { speed: 1 }); return; }
+    M.play('Idle');
+  }
   pose(dt) {
+    if (this.usesModel) return this.animateModel(dt);
     const q = {}, st = this.state, t = this.time; let rate = 12;
     q.browL = 0.5; q.browR = 0.5; q.browY = 0; q.mouthOpen = st === 'attack' ? 0.7 : 0.15; q.mouthW = 0.85; q.eyeOpen = st === 'attack' && this.t < WL[this.atk].windup ? 1.4 : 1; q.footR = 0; q.footL = 0; q.headZ = 0; q.roll = 0; q.headY = 0; q.yaw = 0; q.bodyY = 0; q.lean = 0.15; q.headX = 0;
     q.armR = { x: 0.4, y: 0, z: 0.5 }; q.armL = { x: 0.1, y: 0, z: -0.5 }; q.hipR = 0; q.hipL = 0;
@@ -438,8 +463,8 @@ export class Warlord extends Enemy {
 // ---------------------------------------------------------------- TRAINING DUMMY (tutorial only; never dies)
 export class Dummy extends Enemy {
   constructor(game, spec) {
-    super(game, spec, { name: 'Training Dummy', half: 0.4, height: 2.0, radius: 0.55, hp: 999, poise: 4 });
-    this.rig = buildDummy(); game.scene.add(this.rig.group); this.rig.group.position.copy(this.pos);
+    super(game, spec, { name: 'Training Dummy', half: 0.4, height: 1.7, radius: 0.55, hp: 999, poise: 4 });
+    this.usesModel = hasModel('goblin'); this.rig = this.usesModel ? new CharacterModel('goblin', { height: 1.75, tint: 0xd8c898 }) : buildDummy(); game.scene.add(this.rig.group); this.rig.group.position.copy(this.pos);
     this.hits = { light: 0, heavy: 0 }; this.results = { blocked: 0, parried: 0, hit: 0, dodged: 0 }; this.mode = 'idle'; this.swingT = 1.5; this.wobble = 0; this.telegraph = game.fx.makeTelegraph(2.3, 1.9);
     this.atk = { windup: 1.0, active: 0.16, recovery: 0.9, range: 2.2, arc: 1.9 };
   }
@@ -471,6 +496,7 @@ export class Dummy extends Enemy {
     this.pose(dt);
   }
   pose(dt) {
+    if (this.usesModel) { const M = this.rig, st = this.state, a = this.atk, t = this.t; if (st === 'stagger') M.play('HitRecieve', { loop: true, speed: 0.45 }); else if (st === 'attack') M.drive('Attack', t < a.windup ? 0.5 * (t / a.windup) : t < a.windup + a.active ? 0.5 + 0.2 * ((t - a.windup) / a.active) : 0.7 + 0.3 * Math.min(1, (t - a.windup - a.active) / a.recovery)); else if (this.wobble > 0.35) M.drive('HitRecieve', 1 - this.wobble); else M.play('Idle'); return; }
     const q = {}, t = this.time, st = this.state; let rate = 16;
     const w = Math.sin(t * 22) * this.wobble * 0.25;
     q.lean = w; q.roll = Math.cos(t * 19) * this.wobble * 0.2; q.browL = 0; q.browR = 0; q.mouthOpen = 0; q.mouthW = 1; q.eyeOpen = 1; q.headY = 0; q.browY = 0;
