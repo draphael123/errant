@@ -263,7 +263,7 @@ export class Player {
     if (st === 'roll') { M.drive('Dodge_Forward', this.rollT / PH.rollTime); return; }
     if (st === 'hurt') { M.drive('Hit_A', 1 - Math.max(0, this.hurtT) / 0.38); return; }
     if (st === 'stagger') { M.play('Hit_B', { loop: true, speed: 0.5 }); return; }
-    if (st === 'block') { M.play('Blocking'); return; }
+    if (st === 'block') { if (this.speedFrac > 0.08) M.play('Walking_A', { speed: 0.7 + this.speedFrac * 0.8, fade: 0.12 }); else M.play('Blocking', { fade: 0.12 }); return; }
     if (!ground) { if (this.vel.y > 1.5) M.play('Jump_Start', { loop: false, clamp: true }); else M.play('Jump_Idle'); return; }
     if (this.landT > 0.04 && st === 'idle') { M.play('Jump_Land', { loop: false, clamp: true }); return; }
     if (st === 'run') { M.play('Running_A', { speed: 0.55 + this.speedFrac * 0.75 }); return; }

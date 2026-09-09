@@ -106,10 +106,10 @@ export function buildLevel(scene, phys) {
   L.mists.push(F.mist(scene, 0, 0, 86, 40, 50, 3));
   F2.ropeBridge(scene, phys, [0, 6, 70.6], [0, 6.4, 80.2], 1.9, 1.0);
   ground(0, 82, 4.5, 4, 6.4, 2.2, { seed: 17, plants: false }); gem(0, 6.4, 82);
-  L.swings.push(F2.swingLog(scene, phys, 0, 7.2, 88.5, 3.8, 7, 0.5, 3.4));
+  L.swings.push(F2.swingLog(scene, phys, 0, 6.6, 87.6, 4.4, 7, 0.36, 5.6, 2.4));
   ground(0, 97, 10, 8, 7.5, 3, { seed: 21 });
   goblin('slinger', 0, 7.5, 99.5, { patrol: 2 });
-  lantern(-4, 7.5, 94); sign(4, 7.5, 94.5, 'RIDE THE LOG\nTHEN LEAP', -0.6);
+  lantern(-4, 7.5, 94); sign(4, 7.5, 94.5, 'RIDE THE RAFT\nTHEN LEAP', -0.6);
   pine(4.2, 7.5, 99.8, 11, 0.9); shroom(-4, 7.5, 99, 12, true); fernP(-2, 7.5, 95, 14);
   gem(-3.5, 7.5, 97);
   outTree('pine', -10, 2, 80, 45, 1.6); outTree('pine', 10.5, 3, 90, 46, 1.7);

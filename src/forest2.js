@@ -61,7 +61,7 @@ export function ropeBridge(scene, phys, a, b, width = 1.9, sag = 0.9) {
   for (let i = 0; i <= n; i++) {
     const u = i / n; const p = A.clone().lerp(B, u); p.y -= Math.sin(u * Math.PI) * sag;
     if (i < n) { const q = A.clone().lerp(B, (i + 0.5) / n); q.y -= Math.sin((i + 0.5) / n * Math.PI) * sag; const pl = m(plank, MAT.wood, q.x, q.y, q.z); pl.rotation.y = Math.atan2(dir.x, dir.z); pl.rotation.x = -Math.cos((i + 0.5) / n * Math.PI) * sag * Math.PI / len * 1.2; g.add(pl);
-      const bb = phys.add(new Box(q.x - width / 2 - 0.2, q.y - 0.3, q.z - width / 2 - 0.2, q.x + width / 2 + 0.2, q.y + 0.06, q.z + width / 2 + 0.2)); bb.tag = 'bridge'; boxes.push(bb); }
+      const bb = phys.add(new Box(q.x - width / 2 - 0.2, q.y - 0.7, q.z - width / 2 - 0.2, q.x + width / 2 + 0.2, q.y + 0.06, q.z + width / 2 + 0.2)); bb.tag = 'bridge'; boxes.push(bb); }
     const L = p.clone().addScaledVector(side, width / 2), R = p.clone().addScaledVector(side, -width / 2);
     if (prevL) { g.add(bone(prevL.clone().setY(prevL.y + 0.05), L.clone().setY(L.y + 0.05), 0.035, 0.035, rope, 4)); g.add(bone(prevR.clone().setY(prevR.y + 0.05), R.clone().setY(R.y + 0.05), 0.035, 0.035, rope, 4)); g.add(bone(prevL.clone().setY(prevL.y + 1.0), L.clone().setY(L.y + 1.0), 0.03, 0.03, rope, 4)); g.add(bone(prevR.clone().setY(prevR.y + 1.0), R.clone().setY(R.y + 1.0), 0.03, 0.03, rope, 4)); }
     if (i % 2 === 0) { g.add(bone(L, L.clone().setY(L.y + 1.0), 0.025, 0.025, rope, 4)); g.add(bone(R, R.clone().setY(R.y + 1.0), 0.025, 0.025, rope, 4)); }
@@ -72,22 +72,23 @@ export function ropeBridge(scene, phys, a, b, width = 1.9, sag = 0.9) {
 }
 
 // ---------- swinging log on chains from an overhead limb; the level moves its box each frame via `swing`
-export function swingLog(scene, phys, x, y, z, len = 3.6, drop = 7, amp = 0.55, period = 3.2) {
+export function swingLog(scene, phys, x, y, z, len = 4.4, drop = 7, amp = 0.35, period = 5.5, depth = 2.4) {
   const pivot = new THREE.Group(); pivot.position.set(x, y + drop, z);
   const limb = m(new THREE.CylinderGeometry(0.5, 0.7, 14, 8), MAT.bark, 0, 0.6, 0); limb.rotation.z = Math.PI / 2; limb.rotation.y = 0.2; limb.position.set(x, y + drop + 0.6, z); scene.add(freeze(limb));
   const chain = new THREE.MeshStandardMaterial({ color: 0x4a4a52, roughness: 0.6, metalness: 0.5 });
-  for (const s of [-1, 1]) pivot.add(bone(V(s * len * 0.4, 0, 0), V(s * len * 0.4, -drop, 0), 0.06, 0.06, chain, 5));
-  const log = m(new THREE.CylinderGeometry(0.5, 0.5, len, 10), MAT.bark, 0, -drop, 0); log.rotation.z = Math.PI / 2; pivot.add(log);
-  pivot.add(m(new THREE.BoxGeometry(len * 0.85, 0.08, 0.7), MAT.stoneMoss, 0, -drop + 0.5, 0, false));
+  for (const s of [-1, 1]) for (const zz of [-depth * 0.35, depth * 0.35]) pivot.add(bone(V(s * len * 0.4, 0, zz), V(s * len * 0.4, -drop, zz), 0.06, 0.06, chain, 5));
+  const nLogs = 3; for (let i = 0; i < nLogs; i++) { const zz = (i - 1) * (depth / nLogs); const log = m(new THREE.CylinderGeometry(depth / nLogs * 0.5, depth / nLogs * 0.5, len, 10), MAT.bark, 0, -drop, zz); log.rotation.z = Math.PI / 2; pivot.add(log); }
+  for (const s of [-1, 1]) pivot.add(m(new THREE.BoxGeometry(0.16, 0.12, depth + 0.3), MAT.wood, s * len * 0.36, -drop + depth / nLogs * 0.5, 0));
+  pivot.add(m(new THREE.BoxGeometry(len * 0.85, 0.06, depth * 0.85), MAT.stoneMoss, 0, -drop + depth / nLogs * 0.5 + 0.02, 0, false));
   scene.add(pivot);
-  const box = phys.add(new Box(x - len / 2, y - 0.5, z - 0.5, x + len / 2, y + 0.5, z + 0.5, 'mover')); box.delta = new THREE.Vector3();
-  return { group: pivot, box, x, y, z, len, drop, amp, period, last: V(x, y, z) };
+  const top = y + depth / nLogs * 0.5; const box = phys.add(new Box(x - len / 2, top - 1.0, z - depth / 2, x + len / 2, top, z + depth / 2, 'mover')); box.delta = new THREE.Vector3();
+  return { group: pivot, box, x, y: top, z, len, depth, drop, amp, period, last: V(x, top, z) };
 }
 export function updateSwing(sw, t) {
   const th = Math.sin(t * Math.PI * 2 / sw.period) * sw.amp; sw.group.rotation.x = th;
   const px = sw.x, py = sw.y + sw.drop - Math.cos(th) * sw.drop, pz = sw.z + Math.sin(th) * sw.drop;
   sw.box.delta.set(px - sw.last.x, py - sw.last.y, pz - sw.last.z); sw.last.set(px, py, pz);
-  sw.box.min.set(px - sw.len / 2, py - 0.5, pz - 0.5); sw.box.max.set(px + sw.len / 2, py + 0.5, pz + 0.5);
+  sw.box.min.set(px - sw.len / 2, py - 1.0, pz - sw.depth / 2); sw.box.max.set(px + sw.len / 2, py, pz + sw.depth / 2);
 }
 
 // ---------- leaf litter (instanced flat quads) and canopy trees

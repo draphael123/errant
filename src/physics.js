@@ -41,12 +41,13 @@ export class Physics {
     body.onGround = false; body.hitWall = false; body.hitHead = false;
     const prevGround = body.groundBox; body.groundBox = null;
 
-    p.x += v.x * dt; this.resolveXZ(body, 'x');
-    p.z += v.z * dt; this.resolveXZ(body, 'z');
+    const canStep = !!prevGround;
+    p.x += v.x * dt; this.resolveXZ(body, 'x', canStep);
+    p.z += v.z * dt; this.resolveXZ(body, 'z', canStep);
     p.y += v.y * dt; this.resolveY(body, prevY, prevGround);
   }
 
-  resolveXZ(body, axis) {
+  resolveXZ(body, axis, canStep = false) {
     const p = body.pos, h = body.half;
     const ymin = p.y + 0.05, ymax = p.y + body.height - 0.02;   // ignore the surface we stand on
     for (const b of this.boxes) {
@@ -54,6 +55,8 @@ export class Physics {
       if (ymin >= b.max.y || ymax <= b.min.y) continue;
       if (p.x - h >= b.max.x || p.x + h <= b.min.x) continue;
       if (p.z - h >= b.max.z || p.z + h <= b.min.z) continue;
+      // a ledge no higher than a stair riser: step onto it (only when there is headroom)
+      if (canStep && b.max.y - p.y <= 0.45 && b.max.y > p.y && !this.blockedAbove(body, b.max.y)) { p.y = b.max.y; body.stepped = true; continue; }
       // overlapping: push out along the axis we just moved on
       const c = (b.min[axis] + b.max[axis]) / 2;
       if (p[axis] < c) p[axis] = b.min[axis] - h; else p[axis] = b.max[axis] + h;
@@ -61,6 +64,11 @@ export class Physics {
     }
   }
 
+  blockedAbove(body, footY) {
+    const p = body.pos, h = body.half, top = footY + body.height - 0.02;
+    for (const b of this.boxes) { if (!b.solid) continue; if (p.x - h >= b.max.x || p.x + h <= b.min.x || p.z - h >= b.max.z || p.z + h <= b.min.z) continue; if (b.min.y < top && b.min.y >= footY + 0.5) return true; }
+    return false;
+  }
   resolveY(body, prevY, prevGround) {
     const p = body.pos, h = body.half, v = body.vel;
     for (const b of this.boxes) {
