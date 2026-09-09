@@ -5,7 +5,7 @@ Repo: `errant/` (run `node serve.mjs`, open http://localhost:5850). Live: https:
 `teleport`, `god()`, `render()` returns a JPEG data URL, `perf`, `sfxLog`). F3 toggles the frame counter with the last SFX names.
 The browser pane cannot screenshot WebGL: post `ERRANT.render()` to a scratchpad upload server and Read the JPEG.
 
-Do the five jobs below in order. Verify each in the browser before moving on. Commit per job. Deploy at the end.
+Do the eight jobs below in order. Verify each in the browser before moving on. Commit per job. Deploy at the end.
 
 ---
 
@@ -66,6 +66,42 @@ Make it read as a deep wood from every angle:
 - Life: butterflies (2-quad flappers on random paths), a deer that bolts when the player nears, crows that lift off from the palisade, fireflies only near the ravine mist at "dusk" areas.
 - Sound: a forest bed (wind in leaves, distant birds) as a looping CC0 file under the music, quieter near the camp where the goblin chatter takes over.
 
+## 6. The boss is a goblin
+
+Retire the Hollow Warden. The level's boss is the **Goblin Warlord** who rules the camp: a brute-sized goblin (scale ~2.2) with a
+crown of antlers on a pot helm, a scrap-iron chest plate, a huge spiked maul in one hand and a goblin skull-shield in the other,
+a red war-paint face, and the same brows/eyes/mouth rig so it can sneer, roar and panic at low health.
+- Build it in `rigs.js` as `buildWarlord()` from the goblin body (not the knight body), then `bakeRig`.
+- Moves (frame data in `enemies.js`, same hyperarmour/poise rules): **maul slam** (ring shockwave, jump it), **sweep** (wide, guardable),
+  **charge** (roll or dash through, he crashes into a menhir and staggers), and two goblin-only tricks: **horn call** (summons 2 knaves
+  from the palisade gates; max 4 alive) and **stone barrage** (three lobbed stones, guardable). Phase 2 at 50 %: faster, sweeps chain,
+  and he kicks the campfire over (fire patch hazard on the floor for 6 s).
+- Arena: the Warden's glade becomes the **Warlord's Yard**: a palisade ring with two gates, totems, a war-drum that beats during the fight,
+  goblin spectators on the palisade who cheer him and jeer you (voice bark chatter from job 3).
+- HUD boss name: "THE GOBLIN WARLORD". Victory screen text updates. Music: the boss track stays synth unless a CC0 drum track is found.
+
+## 7. A longer level
+
+The route is ~4 minutes. Take it to 7–9 with two new segments between the gorge and the hollow tree, and one after the treetop:
+- **The Mushroom Hollow** (after the slinger ledge): a shaded dell of giant mushrooms; caps are bouncy platforms (land on one → launched
+  1.6× jump height with a boing), some caps tilt when stood on, glowing blue caps light the way, spore clouds slow the player, two skirmishers
+  and a brute patrol the floor. A shrine at the exit.
+- **The Root Maze** (before the tree): tangled roots at three heights, a short climb where you jump between root loops, a goblin slinger nest
+  up high that must be reached by a dash. One heart, three gems.
+- **The Canopy Walk** (after the treetop, before the yard): rope bridges between three big trees, one bridge cut by a goblin as you approach
+  (it swings down into a ramp), crows lift off, a view of the yard below. Shrine before the boss gate.
+- Keep gems at 25–30 total and hearts at 5. Every new segment gets a name toast and a shrine.
+
+## 8. Collision on props
+
+Nothing the player would expect to be solid should be walk-through:
+- Mushrooms (stem cylinders as AABBs; caps of the big ones are standable), tree trunks (already done for camp trees; do ALL trunks near the
+  route), stumps, standing stones, tents, the campfire ring (walking into the flames costs 5 hp and pushes you back), palisades (done), signs,
+  lanterns, shrine plinths, crystals (standable), menhirs (done), boulders.
+- Add a `solidProp(box)` helper in `level.js`/`forest.js` that registers an AABB when a prop is placed, so it cannot be forgotten. Enemies
+  path around solids too (`walkDir` already refuses ledges; extend it to slide along a blocked box rather than stop).
+- The ground audit from job 4 also lists any prop within the walkable route that has no box.
+
 ---
 
 ## Definition of done
@@ -74,5 +110,6 @@ Make it read as a deep wood from every angle:
 - Enemy and player combat sounds come from licensed files with a credits file; synth is only a fallback.
 - `ERRANT.audit()` reports zero floating props and zero invisible or fake floors.
 - The climb up the hollow tree is branches, not boxes; the gorge crossing is a bridge and a swinging log.
+- The boss is the Goblin Warlord with all five moves and the horn call working; the level runs 7–9 minutes with three new named segments; every prop near the route is solid and enemies slide around solids.
 - Frame counter stays under 4 ms CPU at 1.5× DPR after the extra foliage (bake everything static; instanced for repeats).
 - Update `errant-project.md` in memory and redeploy.
